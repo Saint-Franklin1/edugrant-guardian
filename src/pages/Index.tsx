@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
 const Index = () => {
-  const { user, role, loading } = useAuth();
+  const { user, role, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +18,11 @@ const Index = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // If user has no profile or incomplete location, redirect to complete profile
+  if (!profile || !profile.county || !profile.ward) {
+    return <Navigate to="/complete-profile" replace />;
+  }
 
   if (role === 'admin') return <Navigate to="/admin" replace />;
   if (role === 'chief') return <Navigate to="/chief" replace />;
