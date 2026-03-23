@@ -2,7 +2,8 @@ import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Shield, User, Users, Home } from 'lucide-react';
+import { LogOut, Shield, User, Users } from 'lucide-react';
+import logo from '@/assets/logo.png';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -26,9 +27,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
       <header className="border-b bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container flex items-center justify-between h-16 px-4">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-heading font-bold text-sm">EV</span>
-            </div>
+            <img src={logo} alt="Elimu Vault" className="h-9 w-auto" />
             <h1 className="font-heading font-bold text-lg">Elimu Vault</h1>
           </div>
           <div className="flex items-center gap-4">

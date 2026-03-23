@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import CompleteProfilePage from "./pages/CompleteProfilePage";
 import UserDashboard from "./pages/UserDashboard";
 import ChiefDashboard from "./pages/ChiefDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/complete-profile" element={<CompleteProfilePage />} />
             <Route path="/dashboard" element={<UserDashboard />} />
             <Route path="/chief" element={<ChiefDashboard />} />
             <Route path="/admin" element={<AdminDashboard />} />
