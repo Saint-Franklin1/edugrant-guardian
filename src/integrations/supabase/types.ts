@@ -155,24 +155,39 @@ export type Database = {
       documents: {
         Row: {
           created_at: string
+          extraction_attempts: number | null
+          file_name: string | null
           file_url: string
+          flag_reason: string | null
           id: string
+          is_active: boolean | null
+          is_flagged: boolean | null
           student_id: string
           type: Database["public"]["Enums"]["document_type"]
           version: number
         }
         Insert: {
           created_at?: string
+          extraction_attempts?: number | null
+          file_name?: string | null
           file_url: string
+          flag_reason?: string | null
           id?: string
+          is_active?: boolean | null
+          is_flagged?: boolean | null
           student_id: string
           type: Database["public"]["Enums"]["document_type"]
           version?: number
         }
         Update: {
           created_at?: string
+          extraction_attempts?: number | null
+          file_name?: string | null
           file_url?: string
+          flag_reason?: string | null
           id?: string
+          is_active?: boolean | null
+          is_flagged?: boolean | null
           student_id?: string
           type?: Database["public"]["Enums"]["document_type"]
           version?: number
@@ -224,6 +239,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_level: string | null
           constituency: string
           county: string
           created_at: string
@@ -236,6 +252,7 @@ export type Database = {
           ward: string
         }
         Insert: {
+          admin_level?: string | null
           constituency: string
           county: string
           created_at?: string
@@ -248,6 +265,7 @@ export type Database = {
           ward: string
         }
         Update: {
+          admin_level?: string | null
           constituency?: string
           county?: string
           created_at?: string
