@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,51 +7,93 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { counties } from '@/lib/kenya-data';
 import logo from '@/assets/logo.png';
 
+interface County { id: string; name: string; }
+interface Constituency { id: string; name: string; county_id: string; }
+interface Ward { id: string; name: string; constituency_id: string; }
+
 const CompleteProfilePage = () => {
-  const { user, profile } = useAuth();
-  const [form, setForm] = useState({
-    name: profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || '',
-    county: '', constituency: '', ward: '',
-  });
-  const [loading, setLoading] = useState(false);
+  const { user, profile, role, roles, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
+  const [name, setName] = useState(profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
+  const [selectedCountyId, setSelectedCountyId] = useState('');
+  const [selectedConstituencyId, setSelectedConstituencyId] = useState('');
+  const [selectedWardId, setSelectedWardId] = useState('');
+
+  const [counties, setCounties] = useState<County[]>([]);
+  const [constituencies, setConstituencies] = useState<Constituency[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const isChiefOrAdmin = roles.includes('chief') || roles.includes('admin');
+
+  useEffect(() => {
+    supabase.from('counties').select('*').order('name').then(({ data }) => setCounties(data || []));
+  }, []);
+
+  useEffect(() => {
+    setSelectedConstituencyId('');
+    setSelectedWardId('');
+    setConstituencies([]);
+    setWards([]);
+    if (!selectedCountyId) return;
+    supabase.from('constituencies').select('*').eq('county_id', selectedCountyId).order('name')
+      .then(({ data }) => setConstituencies(data || []));
+  }, [selectedCountyId]);
+
+  useEffect(() => {
+    setSelectedWardId('');
+    setWards([]);
+    if (!selectedConstituencyId) return;
+    supabase.from('wards').select('*').eq('constituency_id', selectedConstituencyId).order('name')
+      .then(({ data }) => setWards(data || []));
+  }, [selectedConstituencyId]);
+
+  const getSelectedNames = () => {
+    const county = counties.find(c => c.id === selectedCountyId)?.name || '';
+    const constituency = constituencies.find(c => c.id === selectedConstituencyId)?.name || '';
+    const ward = wards.find(w => w.id === selectedWardId)?.name || '';
+    return { county, constituency, ward };
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.county || !form.constituency || !form.ward || !form.name) {
+    if (!selectedCountyId || !selectedConstituencyId || !selectedWardId || !name.trim()) {
       toast({ title: 'Missing fields', description: 'Please fill in all fields.', variant: 'destructive' });
       return;
     }
     if (!user) return;
     setLoading(true);
 
+    const { county, constituency, ward } = getSelectedNames();
+
     // Update user metadata
     await supabase.auth.updateUser({
-      data: { name: form.name, county: form.county, constituency: form.constituency, ward: form.ward, role: 'user' },
+      data: { name, county, constituency, ward, role: role || 'user' },
     });
 
-    // Update or insert profile
+    // Upsert profile
     if (profile) {
-      await supabase.from('profiles').update({
-        name: form.name, county: form.county, constituency: form.constituency, ward: form.ward,
-      }).eq('user_id', user.id);
+      await supabase.from('profiles').update({ name, county, constituency, ward }).eq('user_id', user.id);
     } else {
       await supabase.from('profiles').insert({
-        user_id: user.id, name: form.name, email: user.email,
-        county: form.county, constituency: form.constituency, ward: form.ward,
+        user_id: user.id, name, email: user.email, county, constituency, ward,
       });
     }
 
+    // Refresh context and route
+    await refreshProfile();
     setLoading(false);
     toast({ title: 'Profile completed!' });
-    // Force reload to pick up new profile
-    window.location.href = '/';
+
+    // Route based on role
+    const primaryRole = role || 'user';
+    if (primaryRole === 'admin') navigate('/admin', { replace: true });
+    else if (primaryRole === 'chief') navigate('/chief', { replace: true });
+    else navigate('/dashboard', { replace: true });
   };
 
   return (
@@ -66,25 +108,39 @@ const CompleteProfilePage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="name">Full Name (as on ID / Birth Certificate)</Label>
-              <Input id="name" value={form.name} onChange={e => update('name', e.target.value)} placeholder="Your full name" required />
+              <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Your full name" required />
             </div>
+
             <div>
               <Label>County</Label>
-              <Select value={form.county} onValueChange={v => update('county', v)}>
+              <Select value={selectedCountyId} onValueChange={setSelectedCountyId}>
                 <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
                 <SelectContent>
-                  {counties.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {counties.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
             <div>
-              <Label htmlFor="constituency">Constituency</Label>
-              <Input id="constituency" value={form.constituency} onChange={e => update('constituency', e.target.value)} placeholder="Your constituency" required />
+              <Label>Constituency</Label>
+              <Select value={selectedConstituencyId} onValueChange={setSelectedConstituencyId} disabled={!selectedCountyId}>
+                <SelectTrigger><SelectValue placeholder={selectedCountyId ? 'Select constituency' : 'Select county first'} /></SelectTrigger>
+                <SelectContent>
+                  {constituencies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+
             <div>
-              <Label htmlFor="ward">Ward</Label>
-              <Input id="ward" value={form.ward} onChange={e => update('ward', e.target.value)} placeholder="Your ward" required />
+              <Label>Ward</Label>
+              <Select value={selectedWardId} onValueChange={setSelectedWardId} disabled={!selectedConstituencyId}>
+                <SelectTrigger><SelectValue placeholder={selectedConstituencyId ? 'Select ward' : 'Select constituency first'} /></SelectTrigger>
+                <SelectContent>
+                  {wards.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? 'Saving...' : 'Complete Profile'}
             </Button>

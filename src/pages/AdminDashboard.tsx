@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
@@ -17,7 +16,7 @@ import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle } from '
 const bursarySteps = ['verified', 'approved_for_funding', 'allocated', 'disbursed', 'completed'];
 
 const AdminDashboard = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { toast } = useToast();
   const [students, setStudents] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
@@ -28,12 +27,25 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
-    const [studRes, burRes, fraudRes] = await Promise.all([
-      supabase.from('student_profiles').select('*, profiles:user_id(name, ward, constituency, county)'),
+    setLoading(true);
+    // Fetch student profiles (RLS handles scoping to constituency)
+    const { data: studData } = await supabase.from('student_profiles').select('*');
+    const studentList = studData || [];
+
+    // Fetch profiles for these students to get geographic info
+    if (studentList.length > 0) {
+      const userIds = [...new Set(studentList.map(s => s.user_id))];
+      const { data: profilesData } = await supabase.from('profiles').select('user_id, name, ward, constituency, county').in('user_id', userIds);
+      const profileMap = Object.fromEntries((profilesData || []).map(p => [p.user_id, p]));
+      studentList.forEach((s: any) => { s.studentProfile = profileMap[s.user_id]; });
+    }
+
+    const [burRes, fraudRes] = await Promise.all([
       supabase.from('bursary_records').select('*, student_profiles(student_name, school_name)'),
       supabase.from('fraud_flags').select('*, student_profiles(student_name)'),
     ]);
-    setStudents(studRes.data || []);
+
+    setStudents(studentList);
     setBursaryRecords(burRes.data || []);
     setFraudFlags(fraudRes.data || []);
     setLoading(false);
@@ -47,22 +59,12 @@ const AdminDashboard = () => {
     const educationId = decision === 'approved' ? `EV-${Date.now().toString(36).toUpperCase()}-${selected.id.slice(0, 4).toUpperCase()}` : null;
 
     await supabase.from('verification_records').insert({
-      student_id: selected.id,
-      verifier_id: user.id,
-      role: 'admin' as any,
-      decision: decision as any,
+      student_id: selected.id, verifier_id: user.id, role: 'admin' as any, decision: decision as any,
     });
-    
-    await supabase.from('student_profiles').update({
-      status: newStatus as any,
-      education_id: educationId,
-    }).eq('id', selected.id);
+    await supabase.from('student_profiles').update({ status: newStatus as any, education_id: educationId }).eq('id', selected.id);
 
     if (decision === 'approved') {
-      await supabase.from('bursary_records').insert({
-        student_id: selected.id,
-        status: 'verified' as any,
-      });
+      await supabase.from('bursary_records').insert({ student_id: selected.id, status: 'verified' as any });
     }
 
     await supabase.from('audit_logs').insert({ actor_id: user.id, action: `admin_${decision}`, target_id: selected.id });
@@ -73,12 +75,7 @@ const AdminDashboard = () => {
 
   const handleComment = async () => {
     if (!selected || !user || !comment.trim()) return;
-    await supabase.from('comments').insert({
-      student_id: selected.id,
-      author_id: user.id,
-      role: 'admin' as any,
-      comment_text: comment,
-    });
+    await supabase.from('comments').insert({ student_id: selected.id, author_id: user.id, role: 'admin' as any, comment_text: comment });
     toast({ title: 'Comment added' });
     setComment('');
   };
@@ -90,6 +87,21 @@ const AdminDashboard = () => {
     toast({ title: 'Bursary status updated' });
     fetchData();
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Admin Dashboard">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
+              <Shield className="h-4 w-4 text-primary" />
+            </div>
+            <p className="text-muted-foreground text-sm">Loading dashboard data...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const stats = {
     total: students.length,
@@ -113,8 +125,8 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div><span className="text-muted-foreground">School:</span> {selected.school_name}</div>
                   <div><span className="text-muted-foreground">Birth Cert:</span> {selected.birth_cert_number}</div>
-                  <div><span className="text-muted-foreground">Ward:</span> {selected.profiles?.ward}</div>
-                  <div><span className="text-muted-foreground">Constituency:</span> {selected.profiles?.constituency}</div>
+                  <div><span className="text-muted-foreground">Ward:</span> {selected.studentProfile?.ward}</div>
+                  <div><span className="text-muted-foreground">Constituency:</span> {selected.studentProfile?.constituency}</div>
                 </div>
               </CardContent>
             </Card>
@@ -173,15 +185,15 @@ const AdminDashboard = () => {
         <TabsContent value="applications" className="mt-4">
           <Card>
             <CardContent className="pt-6">
-              {loading ? <p className="text-muted-foreground">Loading...</p> : students.length === 0 ? (
-                <p className="text-muted-foreground">No applications.</p>
+              {students.length === 0 ? (
+                <p className="text-muted-foreground">No applications in your constituency yet.</p>
               ) : (
                 <div className="space-y-2">
                   {students.map(s => (
                     <div key={s.id} className="flex items-center justify-between p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors cursor-pointer" onClick={() => setSelected(s)}>
                       <div>
                         <p className="font-medium">{s.student_name}</p>
-                        <p className="text-sm text-muted-foreground">{s.school_name} • {s.profiles?.ward}</p>
+                        <p className="text-sm text-muted-foreground">{s.school_name} • {s.studentProfile?.ward}</p>
                       </div>
                       <StatusBadge status={s.status} />
                     </div>
@@ -237,7 +249,7 @@ const AdminDashboard = () => {
 
         <TabsContent value="flags" className="mt-4">
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-warning" /> Fraud Flags</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> Fraud Flags</CardTitle></CardHeader>
             <CardContent>
               {fraudFlags.length === 0 ? (
                 <p className="text-muted-foreground">No fraud flags detected.</p>

@@ -19,7 +19,9 @@ const ChiefDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchStudents = async () => {
-    const { data } = await supabase.from('student_profiles').select('*, profiles:user_id(name, ward, constituency, county)').in('status', ['submitted', 'under_review']);
+    setLoading(true);
+    // RLS handles ward scoping - just fetch student_profiles directly
+    const { data } = await supabase.from('student_profiles').select('*').in('status', ['submitted', 'under_review']);
     setStudents(data || []);
     setLoading(false);
   };
@@ -29,18 +31,15 @@ const ChiefDashboard = () => {
   const handleDecision = async (decision: 'approved' | 'rejected') => {
     if (!selected || !user) return;
     const newStatus = decision === 'approved' ? 'under_review' : 'rejected';
-    
+
     const { error: verErr } = await supabase.from('verification_records').insert({
-      student_id: selected.id,
-      verifier_id: user.id,
-      role: 'chief' as any,
-      decision: decision as any,
+      student_id: selected.id, verifier_id: user.id, role: 'chief' as any, decision: decision as any,
     });
     if (verErr) { toast({ title: 'Error', description: verErr.message, variant: 'destructive' }); return; }
 
     await supabase.from('student_profiles').update({ status: newStatus as any }).eq('id', selected.id);
     await supabase.from('audit_logs').insert({ actor_id: user.id, action: `chief_${decision}`, target_id: selected.id });
-    
+
     toast({ title: `Application ${decision}` });
     setSelected(null);
     fetchStudents();
@@ -49,15 +48,27 @@ const ChiefDashboard = () => {
   const handleComment = async () => {
     if (!selected || !user || !comment.trim()) return;
     const { error } = await supabase.from('comments').insert({
-      student_id: selected.id,
-      author_id: user.id,
-      role: 'chief' as any,
-      comment_text: comment,
+      student_id: selected.id, author_id: user.id, role: 'chief' as any, comment_text: comment,
     });
     if (error) { toast({ title: 'Error', description: error.message, variant: 'destructive' }); return; }
     toast({ title: 'Comment added' });
     setComment('');
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout title="Chief Dashboard">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <p className="text-muted-foreground text-sm">Loading verification queue...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (selected) {
     return (
@@ -102,8 +113,12 @@ const ChiefDashboard = () => {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Verification Queue</CardTitle></CardHeader>
         <CardContent>
-          {loading ? <p className="text-muted-foreground">Loading...</p> : students.length === 0 ? (
-            <p className="text-muted-foreground">No pending applications.</p>
+          {students.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+              <p className="text-muted-foreground font-medium">No pending applications</p>
+              <p className="text-sm text-muted-foreground mt-1">Applications from your ward will appear here.</p>
+            </div>
           ) : (
             <div className="space-y-2">
               {students.map(s => (

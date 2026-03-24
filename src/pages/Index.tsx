@@ -19,11 +19,12 @@ const Index = () => {
 
   if (!user) return <Navigate to="/login" replace />;
 
-  // If user has no profile or incomplete location, redirect to complete profile
-  if (!profile || !profile.county || !profile.ward) {
+  // Redirect to complete profile if location data is missing
+  if (!profile || !profile.county || !profile.constituency || !profile.ward) {
     return <Navigate to="/complete-profile" replace />;
   }
 
+  // Route based on highest-priority role from database
   if (role === 'admin') return <Navigate to="/admin" replace />;
   if (role === 'chief') return <Navigate to="/chief" replace />;
   return <Navigate to="/dashboard" replace />;

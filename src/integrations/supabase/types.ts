@@ -111,6 +111,47 @@ export type Database = {
           },
         ]
       }
+      constituencies: {
+        Row: {
+          county_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          county_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          county_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "constituencies_county_id_fkey"
+            columns: ["county_id"]
+            isOneToOne: false
+            referencedRelation: "counties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      counties: {
+        Row: {
+          id: string
+          name: string
+        }
+        Insert: {
+          id?: string
+          name: string
+        }
+        Update: {
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
@@ -308,6 +349,32 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wards: {
+        Row: {
+          constituency_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          constituency_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          constituency_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wards_constituency_id_fkey"
+            columns: ["constituency_id"]
+            isOneToOne: false
+            referencedRelation: "constituencies"
             referencedColumns: ["id"]
           },
         ]
