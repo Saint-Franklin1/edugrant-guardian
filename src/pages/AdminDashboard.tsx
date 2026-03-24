@@ -37,7 +37,7 @@ const AdminDashboard = () => {
       const userIds = [...new Set(studentList.map(s => s.user_id))];
       const { data: profilesData } = await supabase.from('profiles').select('user_id, name, ward, constituency, county').in('user_id', userIds);
       const profileMap = Object.fromEntries((profilesData || []).map(p => [p.user_id, p]));
-      studentList.forEach(s => { s.studentProfile = profileMap[s.user_id]; });
+      studentList.forEach((s: any) => { s.studentProfile = profileMap[s.user_id]; });
     }
 
     const [burRes, fraudRes] = await Promise.all([
