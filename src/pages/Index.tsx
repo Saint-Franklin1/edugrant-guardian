@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
 const Index = () => {
-  const { user, role, profile, loading } = useAuth();
+  const { user, role, roles, profile, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +18,13 @@ const Index = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  const isAdmin = roles.includes('admin');
+
+  // Admin must select admin_level first
+  if (isAdmin && (!profile || !profile.admin_level)) {
+    return <Navigate to="/select-admin-level" replace />;
+  }
 
   // Redirect to complete profile if location data is missing
   if (!profile || !profile.county || !profile.constituency || !profile.ward) {

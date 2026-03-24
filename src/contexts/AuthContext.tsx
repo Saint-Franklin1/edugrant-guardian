@@ -14,6 +14,7 @@ interface Profile {
   county: string;
   constituency: string;
   ward: string;
+  admin_level: string | null;
 }
 
 interface AuthContextType {

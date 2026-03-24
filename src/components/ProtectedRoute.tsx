@@ -27,6 +27,11 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  // Admin must select level first
+  if (roles.includes('admin') && (!profile || !profile.admin_level)) {
+    return <Navigate to="/select-admin-level" replace />;
+  }
+
   if (!profile || !profile.county || !profile.ward) {
     return <Navigate to="/complete-profile" replace />;
   }
