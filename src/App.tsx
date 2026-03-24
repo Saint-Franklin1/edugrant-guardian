@@ -14,6 +14,7 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import UserDashboard from "./pages/UserDashboard";
 import ChiefDashboard from "./pages/ChiefDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import SelectAdminLevelPage from "./pages/SelectAdminLevelPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
