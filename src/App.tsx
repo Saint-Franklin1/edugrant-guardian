@@ -33,6 +33,7 @@ const App = () => (
             <Route path="/complete-profile" element={<CompleteProfilePage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/select-admin-level" element={<SelectAdminLevelPage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={['user']}>
                 <UserDashboard />
