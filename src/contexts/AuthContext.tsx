@@ -21,17 +21,23 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   role: AppRole | null;
+  roles: AppRole[];
   loading: boolean;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
+
+const ROLE_PRIORITY: Record<AppRole, number> = { admin: 3, chief: 2, user: 1 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
   session: null,
   profile: null,
   role: null,
+  roles: [],
   loading: true,
   signOut: async () => {},
+  refreshProfile: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -41,20 +47,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
-    const [profileRes, roleRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).single(),
-      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-    ]);
-    if (profileRes.data) setProfile(profileRes.data as Profile);
-    if (roleRes.data) setRole(roleRes.data.role);
+    try {
+      const [profileRes, roleRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', userId).single(),
+        supabase.from('user_roles').select('role').eq('user_id', userId),
+      ]);
+      if (profileRes.data) setProfile(profileRes.data as Profile);
+      if (roleRes.data && roleRes.data.length > 0) {
+        const allRoles = roleRes.data.map(r => r.role);
+        setRoles(allRoles);
+        // Pick highest priority role
+        const primary = allRoles.sort((a, b) => (ROLE_PRIORITY[b] || 0) - (ROLE_PRIORITY[a] || 0))[0];
+        setRole(primary);
+      } else {
+        setRoles(['user']);
+        setRole('user');
+      }
+    } catch (err) {
+      console.error('Error fetching user data:', err);
+    }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -62,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setProfile(null);
           setRole(null);
+          setRoles([]);
         }
         setLoading(false);
       }
@@ -85,10 +106,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSession(null);
     setProfile(null);
     setRole(null);
+    setRoles([]);
+  };
+
+  const refreshProfile = async () => {
+    if (user) await fetchUserData(user.id);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, role, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, role, roles, loading, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
