@@ -18,6 +18,15 @@ const CompleteProfilePage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const isAdmin = roles.includes('admin');
+
+  // Block admin without admin_level - redirect to selection page
+  useEffect(() => {
+    if (isAdmin && profile && !profile.admin_level) {
+      navigate('/select-admin-level', { replace: true });
+    }
+  }, [isAdmin, profile, navigate]);
+
   const [name, setName] = useState(profile?.name || user?.user_metadata?.full_name || user?.user_metadata?.name || '');
   const [selectedCountyId, setSelectedCountyId] = useState('');
   const [selectedConstituencyId, setSelectedConstituencyId] = useState('');
