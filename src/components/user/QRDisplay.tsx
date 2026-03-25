@@ -1,5 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ShieldCheck } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type StudentProfile = Database['public']['Tables']['student_profiles']['Row'];
@@ -21,17 +23,24 @@ const QRDisplay = ({ student, ward, constituency }: QRDisplayProps) => {
   });
 
   return (
-    <Card className="text-center">
-      <CardHeader><CardTitle className="text-primary">Education ID</CardTitle></CardHeader>
-      <CardContent className="space-y-4">
-        <div className="inline-block p-4 bg-card rounded-xl border">
-          <QRCodeSVG value={qrData} size={180} level="M" />
+    <Card className="border-0 shadow-md overflow-hidden">
+      <div className="bg-primary p-4 text-center">
+        <div className="flex items-center justify-center gap-2 text-primary-foreground">
+          <ShieldCheck className="h-5 w-5" />
+          <span className="font-heading font-bold">Education ID</span>
         </div>
-        <div className="text-sm space-y-1">
-          <p className="font-heading font-bold text-lg">{student.education_id}</p>
-          <p>{student.student_name}</p>
-          <p className="text-muted-foreground">{ward}, {constituency}</p>
-          <p className="text-xs text-muted-foreground">Verified: {new Date(student.updated_at).toLocaleDateString()}</p>
+      </div>
+      <CardContent className="pt-6 text-center space-y-4">
+        <div className="inline-block p-3 bg-card rounded-xl border-2 border-primary/10">
+          <QRCodeSVG value={qrData} size={160} level="M" />
+        </div>
+        <div className="space-y-2">
+          <p className="font-heading font-bold text-xl text-primary">{student.education_id}</p>
+          <p className="font-medium">{student.student_name}</p>
+          <p className="text-sm text-muted-foreground">{ward}, {constituency}</p>
+          <Badge variant="outline" className="text-xs">
+            Verified {new Date(student.updated_at).toLocaleDateString()}
+          </Badge>
         </div>
       </CardContent>
     </Card>
