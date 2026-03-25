@@ -1,5 +1,6 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { isProfileComplete } from '@/lib/profile-utils';
 
 const Index = () => {
   const { user, role, roles, profile, loading } = useAuth();
@@ -26,8 +27,8 @@ const Index = () => {
     return <Navigate to="/select-admin-level" replace />;
   }
 
-  // Redirect to complete profile if location data is missing
-  if (!profile || !profile.county || !profile.constituency || !profile.ward) {
+  // Redirect to complete profile if location data is missing per role
+  if (!isProfileComplete(profile, role, roles)) {
     return <Navigate to="/complete-profile" replace />;
   }
 

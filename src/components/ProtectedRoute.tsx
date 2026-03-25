@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { isProfileComplete } from '@/lib/profile-utils';
 import type { Database } from '@/integrations/supabase/types';
 
 type AppRole = Database['public']['Enums']['app_role'];
@@ -32,7 +33,8 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     return <Navigate to="/select-admin-level" replace />;
   }
 
-  if (!profile || !profile.county || !profile.ward) {
+  // Check profile completeness based on role and admin_level
+  if (!isProfileComplete(profile, role, roles)) {
     return <Navigate to="/complete-profile" replace />;
   }
 

@@ -1,26 +1,29 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getScopeLabel } from '@/lib/profile-utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
-import { Users, Eye, MessageSquare } from 'lucide-react';
+import { Users, Eye, MessageSquare, MapPin } from 'lucide-react';
 
 const ChiefDashboard = () => {
-  const { user } = useAuth();
+  const { user, profile, role } = useAuth();
   const { toast } = useToast();
   const [students, setStudents] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const scopeLabel = getScopeLabel(profile, role);
+
   const fetchStudents = async () => {
     setLoading(true);
-    // RLS handles ward scoping - just fetch student_profiles directly
     const { data } = await supabase.from('student_profiles').select('*').in('status', ['submitted', 'under_review']);
     setStudents(data || []);
     setLoading(false);
@@ -110,6 +113,15 @@ const ChiefDashboard = () => {
 
   return (
     <DashboardLayout title="Chief Dashboard">
+      {/* Scope label */}
+      {scopeLabel && (
+        <div className="flex items-center gap-2 mb-6 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <MapPin className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-medium text-primary">Viewing: {scopeLabel}</span>
+          <Badge variant="outline" className="ml-auto text-xs">Chief</Badge>
+        </div>
+      )}
+
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5" /> Verification Queue</CardTitle></CardHeader>
         <CardContent>
