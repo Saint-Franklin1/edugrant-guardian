@@ -11,7 +11,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import StatusBadge from '@/components/common/StatusBadge';
+import { requiredDocumentTypes, documentTypes } from '@/lib/kenya-data';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type StudentProfile = Database['public']['Tables']['student_profiles']['Row'];
@@ -27,19 +30,27 @@ const UserDashboard = () => {
   const [birthCert, setBirthCert] = useState('');
   const [schoolName, setSchoolName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [uploadedTypes, setUploadedTypes] = useState<string[]>([]);
 
   const fetchData = async () => {
     if (!user) return;
     const { data } = await supabase.from('student_profiles').select('*').eq('user_id', user.id).single();
     setStudent(data);
     if (data) {
-      const { data: cmts } = await supabase.from('comments').select('*').eq('student_id', data.id).order('created_at', { ascending: true });
-      setComments(cmts || []);
+      const [cmtRes, docRes] = await Promise.all([
+        supabase.from('comments').select('*').eq('student_id', data.id).order('created_at', { ascending: true }),
+        supabase.from('documents').select('type').eq('student_id', data.id).eq('is_active', true),
+      ]);
+      setComments(cmtRes.data || []);
+      setUploadedTypes((docRes.data || []).map(d => d.type));
     }
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [user]);
+
+  const missingRequired = requiredDocumentTypes.filter(t => !uploadedTypes.includes(t));
+  const allRequiredUploaded = missingRequired.length === 0;
 
   const createStudentProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +73,14 @@ const UserDashboard = () => {
 
   const handleSubmit = async () => {
     if (!student) return;
+    if (!allRequiredUploaded) {
+      toast({
+        title: 'Missing documents',
+        description: `Please upload all required documents before submitting. Missing: ${missingRequired.map(t => documentTypes.find(d => d.value === t)?.label).join(', ')}`,
+        variant: 'destructive',
+      });
+      return;
+    }
     const { error } = await supabase.from('student_profiles').update({
       status: 'submitted' as any,
       submitted_at: new Date().toISOString(),
@@ -116,13 +135,49 @@ const UserDashboard = () => {
           <StatusTracker status={student.status} />
 
           {student.status === 'draft' && (
-            <UploadForm studentId={student.id} onUploaded={fetchData} />
+            <>
+              <UploadForm studentId={student.id} onUploaded={fetchData} />
+
+              {/* Document completion checklist */}
+              <Card>
+                <CardHeader><CardTitle className="text-base">Required Documents Checklist</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {documentTypes.map(dt => {
+                      const uploaded = uploadedTypes.includes(dt.value);
+                      return (
+                        <div key={dt.value} className="flex items-center gap-2 text-sm">
+                          {uploaded ? (
+                            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
+                          ) : dt.required ? (
+                            <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border border-muted-foreground/30 shrink-0" />
+                          )}
+                          <span className={uploaded ? 'text-foreground' : 'text-muted-foreground'}>
+                            {dt.label}
+                          </span>
+                          {dt.required && !uploaded && (
+                            <Badge variant="destructive" className="text-xs ml-auto">Required</Badge>
+                          )}
+                          {uploaded && (
+                            <Badge variant="outline" className="text-xs ml-auto text-green-600 border-green-600/30">Uploaded</Badge>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
           )}
 
           <DocumentList studentId={student.id} />
 
           {student.status === 'draft' && (
-            <Button onClick={handleSubmit} className="w-full">Submit Application for Review</Button>
+            <Button onClick={handleSubmit} className="w-full" disabled={!allRequiredUploaded}>
+              {allRequiredUploaded ? 'Submit Application for Review' : `Upload ${missingRequired.length} more required document(s)`}
+            </Button>
           )}
 
           {comments.length > 0 && (

@@ -11,13 +11,15 @@ export const counties = [
 
 // MVP: user types constituency and ward as text
 export const documentTypes = [
-  { value: 'student_id', label: 'Student ID' },
-  { value: 'birth_certificate', label: 'Birth Certificate' },
-  { value: 'parent_id', label: 'Parent ID' },
-  { value: 'admission_letter', label: 'Admission Letter' },
-  { value: 'school_id', label: 'School ID' },
-  { value: 'fee_structure', label: 'Fee Structure' },
-  { value: 'fee_statement', label: 'Fee Statement' },
-  { value: 'vulnerability_proof', label: 'Vulnerability Proof' },
-  { value: 'residency_proof', label: 'Residency Proof' },
+  { value: 'student_id', label: 'Student ID', required: false },
+  { value: 'birth_certificate', label: 'Birth Certificate', required: true },
+  { value: 'parent_id', label: 'Parent ID', required: true },
+  { value: 'admission_letter', label: 'Admission Letter', required: true },
+  { value: 'school_id', label: 'School ID', required: false },
+  { value: 'fee_structure', label: 'Fee Structure', required: true },
+  { value: 'fee_statement', label: 'Fee Statement', required: true },
+  { value: 'vulnerability_proof', label: 'Vulnerability Proof (Optional)', required: false },
+  { value: 'residency_proof', label: 'Residency Proof', required: true },
 ];
+
+export const requiredDocumentTypes = documentTypes.filter(d => d.required).map(d => d.value);

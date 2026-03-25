@@ -1,22 +1,24 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getScopeLabel } from '@/lib/profile-utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin } from 'lucide-react';
 
 const bursarySteps = ['verified', 'approved_for_funding', 'allocated', 'disbursed', 'completed'];
 
 const AdminDashboard = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, role } = useAuth();
   const { toast } = useToast();
   const [students, setStudents] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
@@ -26,13 +28,13 @@ const AdminDashboard = () => {
   const [allocAmount, setAllocAmount] = useState('');
   const [loading, setLoading] = useState(true);
 
+  const scopeLabel = getScopeLabel(profile, role);
+
   const fetchData = async () => {
     setLoading(true);
-    // Fetch student profiles (RLS handles scoping to constituency)
     const { data: studData } = await supabase.from('student_profiles').select('*');
     const studentList = studData || [];
 
-    // Fetch profiles for these students to get geographic info
     if (studentList.length > 0) {
       const userIds = [...new Set(studentList.map(s => s.user_id))];
       const { data: profilesData } = await supabase.from('profiles').select('user_id, name, ward, constituency, county').in('user_id', userIds);
@@ -154,6 +156,15 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout title="Admin Dashboard">
+      {/* Scope label */}
+      {scopeLabel && (
+        <div className="flex items-center gap-2 mb-6 p-3 rounded-lg bg-primary/5 border border-primary/20">
+          <MapPin className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-medium text-primary">Viewing: {scopeLabel}</span>
+          <Badge variant="outline" className="ml-auto text-xs capitalize">{profile?.admin_level} Admin</Badge>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-4 mb-6">
         {[
           { label: 'Total Applications', value: stats.total, icon: Users },
@@ -179,14 +190,18 @@ const AdminDashboard = () => {
         <TabsList>
           <TabsTrigger value="applications">Applications</TabsTrigger>
           <TabsTrigger value="bursary">Bursary Tracker</TabsTrigger>
-          <TabsTrigger value="flags">Fraud Flags</TabsTrigger>
+          <TabsTrigger value="flags">Fraud Flags {fraudFlags.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{fraudFlags.length}</Badge>}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="applications" className="mt-4">
           <Card>
             <CardContent className="pt-6">
               {students.length === 0 ? (
-                <p className="text-muted-foreground">No applications in your constituency yet.</p>
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">No applications in your jurisdiction yet.</p>
+                  <p className="text-sm text-muted-foreground mt-1">Applications within your {profile?.admin_level} will appear here.</p>
+                </div>
               ) : (
                 <div className="space-y-2">
                   {students.map(s => (
