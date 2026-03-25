@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getScopeLabel } from '@/lib/profile-utils';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin, ArrowLeft, MessageSquare, Banknote } from 'lucide-react';
 
 const bursarySteps = ['verified', 'approved_for_funding', 'allocated', 'disbursed', 'completed'];
 
@@ -93,10 +93,10 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <DashboardLayout title="Admin Dashboard">
-        <div className="flex items-center justify-center py-12">
+        <div className="flex items-center justify-center py-20">
           <div className="text-center">
-            <div className="h-8 w-8 rounded-lg bg-primary/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
-              <Shield className="h-4 w-4 text-primary" />
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
+              <Shield className="h-5 w-5 text-primary" />
             </div>
             <p className="text-muted-foreground text-sm">Loading dashboard data...</p>
           </div>
@@ -114,38 +114,61 @@ const AdminDashboard = () => {
 
   if (selected) {
     return (
-      <DashboardLayout title="Final Review">
-        <Button variant="ghost" onClick={() => setSelected(null)} className="mb-4">← Back</Button>
+      <DashboardLayout title="Application Review">
+        <Button variant="ghost" onClick={() => setSelected(null)} className="mb-6 gap-2">
+          <ArrowLeft className="h-4 w-4" /> Back to Queue
+        </Button>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>{selected.student_name}</CardTitle>
+            <Card className="border-0 shadow-md overflow-hidden">
+              <div className="h-1.5 bg-primary" />
+              <CardHeader className="flex flex-row items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="font-heading text-xl">{selected.student_name}</CardTitle>
+                  <CardDescription>{selected.school_name}</CardDescription>
+                </div>
                 <StatusBadge status={selected.status} />
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div><span className="text-muted-foreground">School:</span> {selected.school_name}</div>
-                  <div><span className="text-muted-foreground">Birth Cert:</span> {selected.birth_cert_number}</div>
-                  <div><span className="text-muted-foreground">Ward:</span> {selected.studentProfile?.ward}</div>
-                  <div><span className="text-muted-foreground">Constituency:</span> {selected.studentProfile?.constituency}</div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: 'Birth Cert', value: selected.birth_cert_number },
+                    { label: 'Ward', value: selected.studentProfile?.ward },
+                    { label: 'Constituency', value: selected.studentProfile?.constituency },
+                    { label: 'County', value: selected.studentProfile?.county },
+                  ].map((item, i) => (
+                    <div key={i} className="p-3 rounded-lg bg-muted/50">
+                      <p className="text-xs text-muted-foreground">{item.label}</p>
+                      <p className="text-sm font-medium">{item.value || '—'}</p>
+                    </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
             <DocumentList studentId={selected.id} />
           </div>
           <div className="space-y-4">
-            <Card>
-              <CardHeader><CardTitle>Add Comment</CardTitle></CardHeader>
+            <Card className="border-0 shadow-md">
+              <CardHeader>
+                <CardTitle className="text-base font-heading flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" /> Add Comment
+                </CardTitle>
+              </CardHeader>
               <CardContent className="space-y-3">
-                <Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Add a comment..." />
-                <Button onClick={handleComment} variant="secondary" className="w-full" disabled={!comment.trim()}>Submit Comment</Button>
+                <Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Type your review comment..." rows={3} />
+                <Button onClick={handleComment} variant="secondary" className="w-full" disabled={!comment.trim()}>
+                  Submit Comment
+                </Button>
               </CardContent>
             </Card>
             {selected.status === 'under_review' && (
-              <div className="flex gap-2">
-                <Button onClick={() => handleFinalApproval('approved')} className="flex-1"><CheckCircle className="h-4 w-4 mr-1" /> Approve</Button>
-                <Button onClick={() => handleFinalApproval('rejected')} variant="destructive" className="flex-1"><XCircle className="h-4 w-4 mr-1" /> Reject</Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button onClick={() => handleFinalApproval('approved')} className="gap-1.5">
+                  <CheckCircle className="h-4 w-4" /> Approve
+                </Button>
+                <Button onClick={() => handleFinalApproval('rejected')} variant="destructive" className="gap-1.5">
+                  <XCircle className="h-4 w-4" /> Reject
+                </Button>
               </div>
             )}
           </div>
@@ -156,26 +179,29 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout title="Admin Dashboard">
-      {/* Scope label */}
+      {/* Scope Label */}
       {scopeLabel && (
-        <div className="flex items-center gap-2 mb-6 p-3 rounded-lg bg-primary/5 border border-primary/20">
+        <div className="flex items-center gap-2 mb-6 p-3 rounded-xl bg-primary/5 border border-primary/10">
           <MapPin className="h-4 w-4 text-primary shrink-0" />
           <span className="text-sm font-medium text-primary">Viewing: {scopeLabel}</span>
           <Badge variant="outline" className="ml-auto text-xs capitalize">{profile?.admin_level} Admin</Badge>
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-4 mb-6">
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {[
-          { label: 'Total Applications', value: stats.total, icon: Users },
-          { label: 'Pending Review', value: stats.pending, icon: Shield },
-          { label: 'Verified', value: stats.verified, icon: CheckCircle },
-          { label: 'Rejected', value: stats.rejected, icon: XCircle },
+          { label: 'Total Applications', value: stats.total, icon: Users, color: 'bg-primary/10 text-primary' },
+          { label: 'Pending Review', value: stats.pending, icon: Shield, color: 'bg-amber-50 text-amber-600' },
+          { label: 'Verified', value: stats.verified, icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600' },
+          { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'bg-red-50 text-red-600' },
         ].map(s => (
-          <Card key={s.label}>
+          <Card key={s.label} className="border-0 shadow-md">
             <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-primary/10 p-2"><s.icon className="h-5 w-5 text-primary" /></div>
+              <div className="flex items-center gap-4">
+                <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${s.color}`}>
+                  <s.icon className="h-5 w-5" />
+                </div>
                 <div>
                   <p className="text-2xl font-heading font-bold">{s.value}</p>
                   <p className="text-xs text-muted-foreground">{s.label}</p>
@@ -186,31 +212,49 @@ const AdminDashboard = () => {
         ))}
       </div>
 
+      {/* Tabs */}
       <Tabs defaultValue="applications">
-        <TabsList>
+        <TabsList className="mb-4">
           <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="bursary">Bursary Tracker</TabsTrigger>
-          <TabsTrigger value="flags">Fraud Flags {fraudFlags.length > 0 && <Badge variant="destructive" className="ml-1 text-xs">{fraudFlags.length}</Badge>}</TabsTrigger>
+          <TabsTrigger value="bursary" className="gap-1.5">
+            <Banknote className="h-3.5 w-3.5" /> Bursary
+          </TabsTrigger>
+          <TabsTrigger value="flags" className="gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" /> Flags
+            {fraudFlags.length > 0 && <Badge variant="destructive" className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">{fraudFlags.length}</Badge>}
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="applications" className="mt-4">
-          <Card>
+        <TabsContent value="applications">
+          <Card className="border-0 shadow-md">
             <CardContent className="pt-6">
               {students.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">No applications in your jurisdiction yet.</p>
-                  <p className="text-sm text-muted-foreground mt-1">Applications within your {profile?.admin_level} will appear here.</p>
+                <div className="text-center py-12">
+                  <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="font-medium text-muted-foreground">No applications yet</p>
+                  <p className="text-sm text-muted-foreground/70 mt-1">Applications within your {profile?.admin_level} will appear here.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {students.map(s => (
-                    <div key={s.id} className="flex items-center justify-between p-4 rounded-lg bg-muted hover:bg-muted/80 transition-colors cursor-pointer" onClick={() => setSelected(s)}>
-                      <div>
-                        <p className="font-medium">{s.student_name}</p>
-                        <p className="text-sm text-muted-foreground">{s.school_name} • {s.studentProfile?.ward}</p>
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer group"
+                      onClick={() => setSelected(s)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-heading font-bold text-sm">
+                          {s.student_name?.charAt(0)}
+                        </div>
+                        <div>
+                          <p className="font-medium">{s.student_name}</p>
+                          <p className="text-sm text-muted-foreground">{s.school_name} {s.studentProfile?.ward ? `• ${s.studentProfile.ward}` : ''}</p>
+                        </div>
                       </div>
-                      <StatusBadge status={s.status} />
+                      <div className="flex items-center gap-3">
+                        <StatusBadge status={s.status} />
+                        <ArrowLeft className="h-4 w-4 text-muted-foreground rotate-180 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -219,19 +263,26 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="bursary" className="mt-4">
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5" /> Bursary Lifecycle</CardTitle></CardHeader>
+        <TabsContent value="bursary">
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-heading">
+                <TrendingUp className="h-5 w-5 text-primary" /> Bursary Lifecycle
+              </CardTitle>
+            </CardHeader>
             <CardContent>
               {bursaryRecords.length === 0 ? (
-                <p className="text-muted-foreground">No bursary records yet.</p>
+                <div className="text-center py-12">
+                  <Banknote className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No bursary records yet.</p>
+                </div>
               ) : (
                 <div className="space-y-4">
                   {bursaryRecords.map(b => {
                     const currentIdx = bursarySteps.indexOf(b.status);
                     const nextStatus = bursarySteps[currentIdx + 1];
                     return (
-                      <div key={b.id} className="p-4 rounded-lg bg-muted space-y-3">
+                      <div key={b.id} className="p-4 rounded-xl bg-muted/50 border space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="font-medium">{b.student_profiles?.student_name}</p>
@@ -239,13 +290,15 @@ const AdminDashboard = () => {
                           </div>
                           <StatusBadge status={b.status} />
                         </div>
-                        {b.allocated_amount && <p className="text-sm">Amount: KES {Number(b.allocated_amount).toLocaleString()}</p>}
+                        {b.allocated_amount && (
+                          <p className="text-sm font-medium">Amount: KES {Number(b.allocated_amount).toLocaleString()}</p>
+                        )}
                         {nextStatus && (
-                          <div className="flex gap-2 items-end">
+                          <div className="flex gap-2 items-end pt-2 border-t">
                             {nextStatus === 'allocated' && (
                               <div className="flex-1">
                                 <Label className="text-xs">Amount (KES)</Label>
-                                <Input type="number" placeholder="Amount" value={allocAmount} onChange={e => setAllocAmount(e.target.value)} className="h-8" />
+                                <Input type="number" placeholder="Enter amount" value={allocAmount} onChange={e => setAllocAmount(e.target.value)} className="h-9" />
                               </div>
                             )}
                             <Button size="sm" onClick={() => updateBursaryStatus(b.id, nextStatus, nextStatus === 'allocated' ? Number(allocAmount) : undefined)}>
@@ -262,19 +315,31 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="flags" className="mt-4">
-          <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" /> Fraud Flags</CardTitle></CardHeader>
+        <TabsContent value="flags">
+          <Card className="border-0 shadow-md">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 font-heading">
+                <AlertTriangle className="h-5 w-5 text-destructive" /> Fraud Flags
+              </CardTitle>
+            </CardHeader>
             <CardContent>
               {fraudFlags.length === 0 ? (
-                <p className="text-muted-foreground">No fraud flags detected.</p>
+                <div className="text-center py-12">
+                  <Shield className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-muted-foreground">No fraud flags detected — all clear.</p>
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {fraudFlags.map(f => (
-                    <div key={f.id} className="p-3 rounded-lg bg-destructive/5 border border-destructive/20">
-                      <p className="font-medium text-sm">{f.flag_type}</p>
-                      <p className="text-xs text-muted-foreground">{f.details}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Student: {f.student_profiles?.student_name}</p>
+                    <div key={f.id} className="p-4 rounded-xl bg-red-50 border border-red-200">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-red-800">{f.flag_type}</p>
+                          <p className="text-sm text-red-600 mt-0.5">{f.details}</p>
+                          <p className="text-xs text-red-500 mt-2">Student: {f.student_profiles?.student_name}</p>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

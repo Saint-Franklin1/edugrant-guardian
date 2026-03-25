@@ -18,21 +18,19 @@ const Index = () => {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  // Show landing page for unauthenticated users
+  if (!user) return <Navigate to="/landing" replace />;
 
   const isAdmin = roles.includes('admin');
 
-  // Admin must select admin_level first
   if (isAdmin && (!profile || !profile.admin_level)) {
     return <Navigate to="/select-admin-level" replace />;
   }
 
-  // Redirect to complete profile if location data is missing per role
   if (!isProfileComplete(profile, role, roles)) {
     return <Navigate to="/complete-profile" replace />;
   }
 
-  // Route based on highest-priority role from database
   if (role === 'admin') return <Navigate to="/admin" replace />;
   if (role === 'chief') return <Navigate to="/chief" replace />;
   return <Navigate to="/dashboard" replace />;

@@ -10,11 +10,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import StatusBadge from '@/components/common/StatusBadge';
 import { requiredDocumentTypes, documentTypes } from '@/lib/kenya-data';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileText, Upload, User, School, Hash, GraduationCap } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type StudentProfile = Database['public']['Tables']['student_profiles']['Row'];
@@ -51,16 +51,14 @@ const UserDashboard = () => {
 
   const missingRequired = requiredDocumentTypes.filter(t => !uploadedTypes.includes(t));
   const allRequiredUploaded = missingRequired.length === 0;
+  const uploadProgress = Math.round(((requiredDocumentTypes.length - missingRequired.length) / requiredDocumentTypes.length) * 100);
 
   const createStudentProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setCreating(true);
     const { error } = await supabase.from('student_profiles').insert({
-      user_id: user.id,
-      student_name: studentName,
-      birth_cert_number: birthCert,
-      school_name: schoolName,
+      user_id: user.id, student_name: studentName, birth_cert_number: birthCert, school_name: schoolName,
     });
     setCreating(false);
     if (error) {
@@ -76,14 +74,13 @@ const UserDashboard = () => {
     if (!allRequiredUploaded) {
       toast({
         title: 'Missing documents',
-        description: `Please upload all required documents before submitting. Missing: ${missingRequired.map(t => documentTypes.find(d => d.value === t)?.label).join(', ')}`,
+        description: `Please upload all required documents. Missing: ${missingRequired.map(t => documentTypes.find(d => d.value === t)?.label).join(', ')}`,
         variant: 'destructive',
       });
       return;
     }
     const { error } = await supabase.from('student_profiles').update({
-      status: 'submitted' as any,
-      submitted_at: new Date().toISOString(),
+      status: 'submitted' as any, submitted_at: new Date().toISOString(),
     }).eq('id', student.id);
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -93,22 +90,54 @@ const UserDashboard = () => {
     }
   };
 
-  if (loading) return <DashboardLayout title="Dashboard"><p className="text-muted-foreground">Loading...</p></DashboardLayout>;
+  if (loading) {
+    return (
+      <DashboardLayout title="Student Dashboard">
+        <div className="flex items-center justify-center py-20">
+          <div className="text-center">
+            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
+              <GraduationCap className="h-5 w-5 text-primary" />
+            </div>
+            <p className="text-muted-foreground text-sm">Loading your dashboard...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   if (!student) {
     return (
-      <DashboardLayout title="Create Student Profile">
-        <Card className="max-w-lg">
-          <CardHeader><CardTitle>Student Information</CardTitle></CardHeader>
-          <CardContent>
-            <form onSubmit={createStudentProfile} className="space-y-4">
-              <div><Label>Student Name</Label><Input value={studentName} onChange={e => setStudentName(e.target.value)} required /></div>
-              <div><Label>Birth Certificate Number</Label><Input value={birthCert} onChange={e => setBirthCert(e.target.value)} /></div>
-              <div><Label>School Name</Label><Input value={schoolName} onChange={e => setSchoolName(e.target.value)} /></div>
-              <Button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create Profile'}</Button>
-            </form>
-          </CardContent>
-        </Card>
+      <DashboardLayout title="Welcome to Elimu Vault">
+        <div className="max-w-xl mx-auto">
+          <Card className="border-0 shadow-lg">
+            <CardHeader className="text-center pb-2">
+              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <GraduationCap className="h-7 w-7 text-primary" />
+              </div>
+              <CardTitle className="font-heading text-xl">Create Student Profile</CardTitle>
+              <CardDescription>Let's set up your student profile to get started with your bursary application.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={createStudentProfile} className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />Student Name</Label>
+                  <Input value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Full name as on birth certificate" required />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Birth Certificate Number</Label>
+                  <Input value={birthCert} onChange={e => setBirthCert(e.target.value)} placeholder="e.g. 12345678" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2"><School className="h-4 w-4 text-muted-foreground" />School Name</Label>
+                  <Input value={schoolName} onChange={e => setSchoolName(e.target.value)} placeholder="Current school name" />
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={creating}>
+                  {creating ? 'Creating...' : 'Create Profile'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
       </DashboardLayout>
     );
   }
@@ -117,77 +146,109 @@ const UserDashboard = () => {
     <DashboardLayout title="Student Dashboard">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Application</CardTitle>
+          {/* Profile Status Card */}
+          <Card className="border-0 shadow-md overflow-hidden">
+            <div className="h-1.5 bg-primary" />
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div className="space-y-1">
+                <CardTitle className="font-heading text-xl">{student.student_name}</CardTitle>
+                <CardDescription>{student.school_name}</CardDescription>
+              </div>
               <StatusBadge status={student.status} />
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Name:</span> {student.student_name}</div>
-                <div><span className="text-muted-foreground">School:</span> {student.school_name}</div>
-                <div><span className="text-muted-foreground">Birth Cert:</span> {student.birth_cert_number}</div>
-                <div><span className="text-muted-foreground">Education ID:</span> {student.education_id || 'Pending'}</div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { icon: Hash, label: 'Birth Cert', value: student.birth_cert_number || 'Not set' },
+                  { icon: FileText, label: 'Education ID', value: student.education_id || 'Pending verification' },
+                  { icon: School, label: 'School', value: student.school_name || 'Not set' },
+                  { icon: Upload, label: 'Documents', value: `${uploadedTypes.length} uploaded` },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                    <item.icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">{item.label}</p>
+                      <p className="text-sm font-medium">{item.value}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
 
+          {/* Progress Tracker */}
           <StatusTracker status={student.status} />
 
+          {/* Upload Progress */}
           {student.status === 'draft' && (
-            <>
-              <UploadForm studentId={student.id} onUploaded={fetchData} />
+            <Card className="border-0 shadow-md">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base font-heading">Document Upload Progress</CardTitle>
+                  <Badge variant={allRequiredUploaded ? 'default' : 'secondary'} className="text-xs">
+                    {uploadProgress}% Complete
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Progress bar */}
+                <div className="h-2 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
 
-              {/* Document completion checklist */}
-              <Card>
-                <CardHeader><CardTitle className="text-base">Required Documents Checklist</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {documentTypes.map(dt => {
-                      const uploaded = uploadedTypes.includes(dt.value);
-                      return (
-                        <div key={dt.value} className="flex items-center gap-2 text-sm">
-                          {uploaded ? (
-                            <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
-                          ) : dt.required ? (
-                            <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />
-                          ) : (
-                            <div className="h-4 w-4 rounded-full border border-muted-foreground/30 shrink-0" />
-                          )}
-                          <span className={uploaded ? 'text-foreground' : 'text-muted-foreground'}>
-                            {dt.label}
-                          </span>
-                          {dt.required && !uploaded && (
-                            <Badge variant="destructive" className="text-xs ml-auto">Required</Badge>
-                          )}
-                          {uploaded && (
-                            <Badge variant="outline" className="text-xs ml-auto text-green-600 border-green-600/30">Uploaded</Badge>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            </>
+                {/* Checklist */}
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {documentTypes.map(dt => {
+                    const uploaded = uploadedTypes.includes(dt.value);
+                    return (
+                      <div key={dt.value} className={`flex items-center gap-2.5 p-2.5 rounded-lg text-sm transition-colors ${
+                        uploaded ? 'bg-emerald-50 border border-emerald-200' : dt.required ? 'bg-red-50/50 border border-red-100' : 'bg-muted/50'
+                      }`}>
+                        {uploaded ? (
+                          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                        ) : dt.required ? (
+                          <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/20 shrink-0" />
+                        )}
+                        <span className={uploaded ? 'text-emerald-800 font-medium' : 'text-foreground/70'}>
+                          {dt.label}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
+          {/* Upload Form */}
+          {student.status === 'draft' && (
+            <UploadForm studentId={student.id} onUploaded={fetchData} />
+          )}
+
+          {/* Documents */}
           <DocumentList studentId={student.id} />
 
+          {/* Submit Button */}
           {student.status === 'draft' && (
-            <Button onClick={handleSubmit} className="w-full" disabled={!allRequiredUploaded}>
+            <Button onClick={handleSubmit} className="w-full" size="lg" disabled={!allRequiredUploaded}>
               {allRequiredUploaded ? 'Submit Application for Review' : `Upload ${missingRequired.length} more required document(s)`}
             </Button>
           )}
 
+          {/* Comments */}
           {comments.length > 0 && (
-            <Card>
-              <CardHeader><CardTitle>Comments from Reviewers</CardTitle></CardHeader>
+            <Card className="border-0 shadow-md">
+              <CardHeader><CardTitle className="text-base font-heading">Comments from Reviewers</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {comments.map(c => (
-                  <div key={c.id} className="p-3 rounded-lg bg-muted">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span className="capitalize font-medium">{c.role}</span>
+                  <div key={c.id} className="p-4 rounded-xl bg-muted/50 border">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                      <Badge variant="outline" className="text-xs capitalize">{c.role}</Badge>
                       <span>{new Date(c.created_at).toLocaleDateString()}</span>
                     </div>
                     <p className="text-sm">{c.comment_text}</p>
@@ -197,7 +258,9 @@ const UserDashboard = () => {
             </Card>
           )}
         </div>
-        <div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
           {student.status === 'verified' && student.education_id && (
             <QRDisplay student={student} ward={profile?.ward || ''} constituency={profile?.constituency || ''} />
           )}
