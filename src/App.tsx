@@ -15,7 +15,9 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import UserDashboard from "./pages/UserDashboard";
 import ChiefDashboard from "./pages/ChiefDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SelectAdminLevelPage from "./pages/SelectAdminLevelPage";
+import AcceptInvitePage from "./pages/AcceptInvitePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +38,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/select-admin-level" element={<SelectAdminLevelPage />} />
+            <Route path="/accept-invite" element={<AcceptInvitePage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={['user']}>
                 <UserDashboard />
@@ -49,6 +52,11 @@ const App = () => (
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/super-admin" element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <SuperAdminDashboard />
               </ProtectedRoute>
             } />
             <Route path="*" element={<NotFound />} />

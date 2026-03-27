@@ -28,6 +28,14 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
 
   if (!user) return <Navigate to="/login" replace />;
 
+  // Super admin bypasses all profile checks
+  if (roles.includes('super_admin')) {
+    if (allowedRoles && !allowedRoles.some(r => roles.includes(r))) {
+      return <Navigate to="/" replace />;
+    }
+    return <>{children}</>;
+  }
+
   // Admin must select level first
   if (roles.includes('admin') && (!profile || !profile.admin_level)) {
     return <Navigate to="/select-admin-level" replace />;

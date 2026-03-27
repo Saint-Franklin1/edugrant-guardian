@@ -7,6 +7,9 @@ export const isProfileComplete = (profile: {
 } | null, role: string | null, roles: string[]): boolean => {
   if (!profile) return false;
 
+  // Super admin doesn't need profile completion
+  if (roles.includes('super_admin')) return true;
+
   const isAdmin = roles.includes('admin');
   const isChief = roles.includes('chief');
 
@@ -34,6 +37,8 @@ export const getScopeLabel = (profile: {
   admin_level?: string | null;
 } | null, role: string | null): string => {
   if (!profile) return '';
+
+  if (role === 'super_admin') return 'All of Kenya — Global Access';
 
   if (role === 'admin') {
     if (profile.admin_level === 'county') return `County: ${profile.county}`;

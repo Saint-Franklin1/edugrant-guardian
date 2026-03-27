@@ -2,7 +2,7 @@ import { ReactNode } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { LogOut, Shield, User, Users, Home } from 'lucide-react';
+import { LogOut, Shield, User, Users, Home, Crown } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -19,6 +19,7 @@ const DashboardLayout = ({ children, title }: DashboardLayoutProps) => {
   };
 
   const roleConfig = {
+    super_admin: { icon: Crown, label: 'Super Admin', color: 'bg-primary/10 text-primary' },
     admin: { icon: Shield, label: 'Administrator', color: 'bg-primary/10 text-primary' },
     chief: { icon: Users, label: 'Chief Verifier', color: 'bg-accent/10 text-accent' },
     user: { icon: User, label: 'Student', color: 'bg-info/10 text-info' },
