@@ -24,44 +24,51 @@ serve(async (req) => {
     const existing = existingUsers?.users?.find(u => u.email === email);
 
     if (existing) {
-      // Make sure both roles exist
+      // Ensure super_admin role exists
       const { data: roles } = await supabase.from('user_roles').select('role').eq('user_id', existing.id);
       const existingRoles = roles?.map(r => r.role) || [];
-      
-      if (!existingRoles.includes('chief')) {
-        await supabase.from('user_roles').insert({ user_id: existing.id, role: 'chief' });
+
+      // Remove old admin/chief roles, add super_admin
+      if (!existingRoles.includes('super_admin')) {
+        await supabase.from('user_roles').insert({ user_id: existing.id, role: 'super_admin' });
       }
-      if (!existingRoles.includes('admin')) {
-        await supabase.from('user_roles').insert({ user_id: existing.id, role: 'admin' });
+      // Remove plain admin role if exists (super_admin replaces it)
+      if (existingRoles.includes('admin')) {
+        await supabase.from('user_roles').delete().eq('user_id', existing.id).eq('role', 'admin');
+      }
+      if (existingRoles.includes('chief')) {
+        await supabase.from('user_roles').delete().eq('user_id', existing.id).eq('role', 'chief');
       }
 
-      return new Response(JSON.stringify({ message: 'User already exists, roles updated' }), {
+      return new Response(JSON.stringify({ message: 'Super Admin role set for existing user' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Create user
+    // Create super admin user
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: {
         name: 'Franklin Sabsabi',
-        county: 'Nairobi',
-        constituency: 'Westlands',
-        ward: 'Parklands',
-        role: 'admin',
+        county: '',
+        constituency: '',
+        ward: '',
+        role: 'super_admin',
       },
     });
 
     if (createError) throw createError;
 
-    // Add chief role too (admin role added by trigger)
     if (newUser.user) {
-      await supabase.from('user_roles').insert({ user_id: newUser.user.id, role: 'chief' });
+      // The trigger creates a 'user' role by default from metadata, but we need super_admin
+      // Delete the default role and add super_admin
+      await supabase.from('user_roles').delete().eq('user_id', newUser.user.id);
+      await supabase.from('user_roles').insert({ user_id: newUser.user.id, role: 'super_admin' });
     }
 
-    return new Response(JSON.stringify({ message: 'Seed user created with admin and chief roles' }), {
+    return new Response(JSON.stringify({ message: 'Super Admin seeded successfully' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error) {
