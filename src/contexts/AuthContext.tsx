@@ -28,7 +28,7 @@ interface AuthContextType {
   refreshProfile: () => Promise<void>;
 }
 
-const ROLE_PRIORITY: Record<AppRole, number> = { admin: 3, chief: 2, user: 1 };
+const ROLE_PRIORITY: Record<AppRole, number> = { super_admin: 4, admin: 3, chief: 2, user: 1 };
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
