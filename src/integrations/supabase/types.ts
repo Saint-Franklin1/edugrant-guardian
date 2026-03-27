@@ -18,26 +18,32 @@ export type Database = {
         Row: {
           action: string
           actor_id: string | null
+          actor_role: string | null
           created_at: string
           id: string
           metadata: Json | null
           target_id: string | null
+          target_type: string | null
         }
         Insert: {
           action: string
           actor_id?: string | null
+          actor_role?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
           target_id?: string | null
+          target_type?: string | null
         }
         Update: {
           action?: string
           actor_id?: string | null
+          actor_role?: string | null
           created_at?: string
           id?: string
           metadata?: Json | null
           target_id?: string | null
+          target_type?: string | null
         }
         Relationships: []
       }
@@ -237,6 +243,51 @@ export type Database = {
           },
         ]
       }
+      invitations: {
+        Row: {
+          admin_level: string | null
+          constituency: string | null
+          county: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          invited_by: string
+          invited_email: string
+          role: Database["public"]["Enums"]["app_role"]
+          status: string
+          token: string
+          ward: string | null
+        }
+        Insert: {
+          admin_level?: string | null
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          expires_at: string
+          id?: string
+          invited_by: string
+          invited_email: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token: string
+          ward?: string | null
+        }
+        Update: {
+          admin_level?: string | null
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          invited_email?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          status?: string
+          token?: string
+          ward?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           admin_level: string | null
@@ -418,7 +469,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "user" | "chief" | "admin"
+      app_role: "user" | "chief" | "admin" | "super_admin"
       bursary_status:
         | "verified"
         | "approved_for_funding"
@@ -569,7 +620,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["user", "chief", "admin"],
+      app_role: ["user", "chief", "admin", "super_admin"],
       bursary_status: [
         "verified",
         "approved_for_funding",

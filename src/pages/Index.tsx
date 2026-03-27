@@ -18,8 +18,10 @@ const Index = () => {
     );
   }
 
-  // Show landing page for unauthenticated users
   if (!user) return <Navigate to="/landing" replace />;
+
+  // Super admin goes directly to super admin dashboard
+  if (role === 'super_admin') return <Navigate to="/super-admin" replace />;
 
   const isAdmin = roles.includes('admin');
 
