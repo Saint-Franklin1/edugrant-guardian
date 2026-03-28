@@ -10,10 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import StatusBadge from '@/components/common/StatusBadge';
 import {
-  Shield, Users, UserPlus, Mail, MapPin, Globe, Building, AlertTriangle,
-  CheckCircle, XCircle, Clock, FileText, Activity, Crown, Ban,
+  Shield, Users, UserPlus, Mail, MapPin, Globe, Building, 
+  CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
 } from 'lucide-react';
 
 interface County { id: string; name: string; }
@@ -24,7 +23,6 @@ const SuperAdminDashboard = () => {
   const { user, session } = useAuth();
   const { toast } = useToast();
 
-  // Invite form state
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteLevel, setInviteLevel] = useState('');
   const [selectedCountyId, setSelectedCountyId] = useState('');
@@ -32,7 +30,6 @@ const SuperAdminDashboard = () => {
   const [selectedWardId, setSelectedWardId] = useState('');
   const [sending, setSending] = useState(false);
 
-  // Data
   const [counties, setCounties] = useState<County[]>([]);
   const [constituencies, setConstituencies] = useState<Constituency[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
@@ -48,21 +45,15 @@ const SuperAdminDashboard = () => {
   }, []);
 
   useEffect(() => {
-    setSelectedConstituencyId('');
-    setSelectedWardId('');
-    setConstituencies([]);
-    setWards([]);
+    setSelectedConstituencyId(''); setSelectedWardId(''); setConstituencies([]); setWards([]);
     if (!selectedCountyId) return;
-    supabase.from('constituencies').select('*').eq('county_id', selectedCountyId).order('name')
-      .then(({ data }) => setConstituencies(data || []));
+    supabase.from('constituencies').select('*').eq('county_id', selectedCountyId).order('name').then(({ data }) => setConstituencies(data || []));
   }, [selectedCountyId]);
 
   useEffect(() => {
-    setSelectedWardId('');
-    setWards([]);
+    setSelectedWardId(''); setWards([]);
     if (!selectedConstituencyId) return;
-    supabase.from('wards').select('*').eq('constituency_id', selectedConstituencyId).order('name')
-      .then(({ data }) => setWards(data || []));
+    supabase.from('wards').select('*').eq('constituency_id', selectedConstituencyId).order('name').then(({ data }) => setWards(data || []));
   }, [selectedConstituencyId]);
 
   const fetchData = async () => {
@@ -79,7 +70,6 @@ const SuperAdminDashboard = () => {
     setStudents(studRes.data || []);
     setAuditLogs(auditRes.data || []);
 
-    // Build admin list from roles + profiles
     const roles = rolesRes.data || [];
     const profiles = profilesRes.data || [];
     const adminRoles = roles.filter(r => r.role === 'admin' || r.role === 'chief');
@@ -103,40 +93,29 @@ const SuperAdminDashboard = () => {
 
   const handleSendInvite = async () => {
     if (!inviteEmail || !inviteLevel || !selectedCountyId) {
-      toast({ title: 'Missing fields', description: 'Fill in email, admin level, and county.', variant: 'destructive' });
-      return;
+      toast({ title: 'Missing fields', description: 'Fill in email, admin level, and county.', variant: 'destructive' }); return;
     }
-
     if (inviteLevel === 'constituency' && !selectedConstituencyId) {
-      toast({ title: 'Missing constituency', variant: 'destructive' });
-      return;
+      toast({ title: 'Missing constituency', variant: 'destructive' }); return;
     }
     if (inviteLevel === 'ward' && (!selectedConstituencyId || !selectedWardId)) {
-      toast({ title: 'Missing constituency/ward', variant: 'destructive' });
-      return;
+      toast({ title: 'Missing constituency/ward', variant: 'destructive' }); return;
     }
 
     const { county, constituency, ward } = getSelectedNames();
-
     setSending(true);
     const { data, error } = await supabase.functions.invoke('send-admin-invite', {
       body: { email: inviteEmail, admin_level: inviteLevel, county, constituency, ward },
     });
-
     setSending(false);
+
     if (error || data?.error) {
       toast({ title: 'Failed to send invite', description: data?.error || error?.message, variant: 'destructive' });
     } else {
       const inviteLink = `${window.location.origin}/accept-invite?token=${data.token}`;
-      toast({
-        title: 'Invitation created!',
-        description: `Share this link with the admin: The invite link has been generated. Token expires in 1 hour.`,
-      });
-      // Copy link to clipboard
+      toast({ title: 'Invitation created!', description: 'The invite link has been copied to your clipboard.' });
       navigator.clipboard?.writeText(inviteLink);
-      setInviteEmail('');
-      setInviteLevel('');
-      setSelectedCountyId('');
+      setInviteEmail(''); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
   };
@@ -147,13 +126,8 @@ const SuperAdminDashboard = () => {
   if (loading) {
     return (
       <DashboardLayout title="Super Admin Dashboard">
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
-              <Crown className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-muted-foreground text-sm">Loading dashboard...</p>
-          </div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     );
@@ -168,28 +142,28 @@ const SuperAdminDashboard = () => {
 
   return (
     <DashboardLayout title="Super Admin Dashboard">
-      {/* Global Scope Banner */}
-      <div className="flex items-center gap-2 mb-6 p-3 rounded-xl bg-primary/5 border border-primary/10">
+      {/* Banner */}
+      <div className="flex items-center gap-2 mb-8 px-4 py-3 rounded-2xl bg-primary/5 border border-primary/10">
         <Crown className="h-4 w-4 text-primary shrink-0" />
-        <span className="text-sm font-medium text-primary">Super Admin — Full system access across Kenya</span>
+        <span className="text-sm font-medium text-primary">Full system access across Kenya</span>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {[
-          { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'bg-primary/10 text-primary' },
-          { label: 'Admins & Chiefs', value: stats.totalAdmins, icon: Shield, color: 'bg-accent/10 text-accent' },
-          { label: 'Student Applications', value: stats.totalStudents, icon: FileText, color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Pending Invites', value: stats.pendingInvites, icon: Mail, color: 'bg-amber-50 text-amber-600' },
+          { label: 'Total Users', value: stats.totalUsers, icon: Users },
+          { label: 'Admins & Chiefs', value: stats.totalAdmins, icon: Shield },
+          { label: 'Student Applications', value: stats.totalStudents, icon: FileText },
+          { label: 'Pending Invites', value: stats.pendingInvites, icon: Mail },
         ].map(s => (
-          <Card key={s.label} className="border-0 shadow-md">
-            <CardContent className="pt-6">
+          <Card key={s.label} className="rounded-2xl shadow-sm">
+            <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${s.color}`}>
-                  <s.icon className="h-5 w-5" />
+                <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
+                  <s.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-heading font-bold">{s.value}</p>
+                  <p className="text-2xl font-bold">{s.value}</p>
                   <p className="text-xs text-muted-foreground">{s.label}</p>
                 </div>
               </div>
@@ -199,31 +173,30 @@ const SuperAdminDashboard = () => {
       </div>
 
       <Tabs defaultValue="invite">
-        <TabsList className="mb-4">
-          <TabsTrigger value="invite" className="gap-1.5"><UserPlus className="h-3.5 w-3.5" /> Invite Admin</TabsTrigger>
-          <TabsTrigger value="admins" className="gap-1.5"><Shield className="h-3.5 w-3.5" /> Admins</TabsTrigger>
-          <TabsTrigger value="invitations" className="gap-1.5"><Mail className="h-3.5 w-3.5" /> Invitations</TabsTrigger>
-          <TabsTrigger value="audit" className="gap-1.5"><Activity className="h-3.5 w-3.5" /> Audit Log</TabsTrigger>
+        <TabsList className="mb-6 rounded-xl">
+          <TabsTrigger value="invite" className="gap-1.5 rounded-lg"><UserPlus className="h-3.5 w-3.5" /> Invite</TabsTrigger>
+          <TabsTrigger value="admins" className="gap-1.5 rounded-lg"><Shield className="h-3.5 w-3.5" /> Admins</TabsTrigger>
+          <TabsTrigger value="invitations" className="gap-1.5 rounded-lg"><Mail className="h-3.5 w-3.5" /> Invitations</TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1.5 rounded-lg"><Activity className="h-3.5 w-3.5" /> Audit</TabsTrigger>
         </TabsList>
 
-        {/* INVITE TAB */}
         <TabsContent value="invite">
-          <Card className="border-0 shadow-md">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
-                <UserPlus className="h-5 w-5 text-primary" /> Invite New Admin
+              <CardTitle className="flex items-center gap-2 text-base">
+                <UserPlus className="h-4 w-4 text-primary" /> Invite New Admin
               </CardTitle>
               <CardDescription>Send a secure, time-bound invitation to onboard a new administrator.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 max-w-lg">
-              <div>
-                <Label>Email Address</Label>
-                <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@example.com" type="email" />
+            <CardContent className="space-y-4 max-w-md">
+              <div className="space-y-1.5">
+                <Label className="text-sm">Email Address</Label>
+                <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@example.com" type="email" className="h-11 rounded-xl" />
               </div>
-              <div>
-                <Label>Admin Level</Label>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Admin Level</Label>
                 <Select value={inviteLevel} onValueChange={v => { setInviteLevel(v); setSelectedCountyId(''); }}>
-                  <SelectTrigger><SelectValue placeholder="Select admin level" /></SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select admin level" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="county"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> County Admin</div></SelectItem>
                     <SelectItem value="constituency"><div className="flex items-center gap-2"><Building className="h-4 w-4" /> Constituency Admin</div></SelectItem>
@@ -233,86 +206,76 @@ const SuperAdminDashboard = () => {
               </div>
 
               {inviteLevel && (
-                <div>
-                  <Label>County</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">County</Label>
                   <Select value={selectedCountyId} onValueChange={setSelectedCountyId}>
-                    <SelectTrigger><SelectValue placeholder="Select county" /></SelectTrigger>
-                    <SelectContent>
-                      {counties.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select county" /></SelectTrigger>
+                    <SelectContent>{counties.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               )}
 
               {showConstituency && (
-                <div>
-                  <Label>Constituency</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Constituency</Label>
                   <Select value={selectedConstituencyId} onValueChange={setSelectedConstituencyId} disabled={!selectedCountyId}>
-                    <SelectTrigger><SelectValue placeholder={selectedCountyId ? 'Select constituency' : 'Select county first'} /></SelectTrigger>
-                    <SelectContent>
-                      {constituencies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder={selectedCountyId ? 'Select constituency' : 'Select county first'} /></SelectTrigger>
+                    <SelectContent>{constituencies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               )}
 
               {showWard && (
-                <div>
-                  <Label>Ward</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Ward</Label>
                   <Select value={selectedWardId} onValueChange={setSelectedWardId} disabled={!selectedConstituencyId}>
-                    <SelectTrigger><SelectValue placeholder={selectedConstituencyId ? 'Select ward' : 'Select constituency first'} /></SelectTrigger>
-                    <SelectContent>
-                      {wards.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
-                    </SelectContent>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder={selectedConstituencyId ? 'Select ward' : 'Select constituency first'} /></SelectTrigger>
+                    <SelectContent>{wards.map(w => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               )}
 
-              <Button onClick={handleSendInvite} disabled={sending} className="w-full">
+              <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
                 {sending ? 'Sending...' : 'Send Invitation'}
               </Button>
-
-              <p className="text-xs text-muted-foreground">
-                ⚠️ Invitation link expires in 1 hour and can only be used once. The invite link will be copied to your clipboard.
-              </p>
+              <p className="text-xs text-muted-foreground">Invitation link expires in 1 hour and can only be used once.</p>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ADMINS TAB */}
         <TabsContent value="admins">
-          <Card className="border-0 shadow-md">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
-                <Shield className="h-5 w-5 text-primary" /> Active Admins & Chiefs
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Shield className="h-4 w-4 text-primary" /> Active Admins & Chiefs
               </CardTitle>
             </CardHeader>
             <CardContent>
               {admins.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-muted-foreground">No admins yet. Send an invitation to get started.</p>
+                <div className="text-center py-16">
+                  <Users className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No admins yet. Send an invitation to get started.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {admins.map((a, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+                    <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-heading font-bold text-sm">
+                        <div className="h-9 w-9 rounded-full bg-primary/8 flex items-center justify-center text-primary font-semibold text-sm">
                           {a.profile?.name?.charAt(0) || '?'}
                         </div>
                         <div>
-                          <p className="font-medium">{a.profile?.name || 'Unknown'}</p>
-                          <p className="text-sm text-muted-foreground">{a.profile?.email}</p>
+                          <p className="font-medium text-sm">{a.profile?.name || 'Unknown'}</p>
+                          <p className="text-xs text-muted-foreground">{a.profile?.email}</p>
                           <p className="text-xs text-muted-foreground">
-                            {a.profile?.admin_level ? `${a.profile.admin_level} admin` : a.role} •
+                            {a.profile?.admin_level ? `${a.profile.admin_level} admin` : a.role} ·
                             {a.profile?.county && ` ${a.profile.county}`}
                             {a.profile?.constituency && ` > ${a.profile.constituency}`}
                             {a.profile?.ward && ` > ${a.profile.ward}`}
                           </p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="capitalize">{a.role}</Badge>
+                      <Badge variant="outline" className="capitalize rounded-full text-xs">{a.role}</Badge>
                     </div>
                   ))}
                 </div>
@@ -321,36 +284,35 @@ const SuperAdminDashboard = () => {
           </Card>
         </TabsContent>
 
-        {/* INVITATIONS TAB */}
         <TabsContent value="invitations">
-          <Card className="border-0 shadow-md">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
-                <Mail className="h-5 w-5 text-primary" /> Invitation History
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Mail className="h-4 w-4 text-primary" /> Invitation History
               </CardTitle>
             </CardHeader>
             <CardContent>
               {invitations.length === 0 ? (
-                <div className="text-center py-12">
-                  <Mail className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-muted-foreground">No invitations sent yet.</p>
+                <div className="text-center py-16">
+                  <Mail className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No invitations sent yet.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {invitations.map(inv => (
-                    <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl bg-muted/50">
+                    <div key={inv.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
                       <div>
-                        <p className="font-medium">{inv.invited_email}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {inv.admin_level} admin • {inv.county}
+                        <p className="font-medium text-sm">{inv.invited_email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {inv.admin_level} admin · {inv.county}
                           {inv.constituency && ` > ${inv.constituency}`}
                           {inv.ward && ` > ${inv.ward}`}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(inv.created_at).toLocaleString()} • Expires {new Date(inv.expires_at).toLocaleString()}
+                          {new Date(inv.created_at).toLocaleString()}
                         </p>
                       </div>
-                      <Badge variant={inv.status === 'used' ? 'default' : inv.status === 'expired' ? 'destructive' : 'secondary'} className="capitalize">
+                      <Badge variant={inv.status === 'used' ? 'default' : inv.status === 'expired' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs">
                         {inv.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
                         {inv.status === 'used' && <CheckCircle className="h-3 w-3 mr-1" />}
                         {inv.status === 'expired' && <XCircle className="h-3 w-3 mr-1" />}
@@ -364,30 +326,29 @@ const SuperAdminDashboard = () => {
           </Card>
         </TabsContent>
 
-        {/* AUDIT LOG TAB */}
         <TabsContent value="audit">
-          <Card className="border-0 shadow-md">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
-                <Activity className="h-5 w-5 text-primary" /> Audit Logs
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Activity className="h-4 w-4 text-primary" /> Audit Logs
               </CardTitle>
-              <CardDescription>Recent system actions and events</CardDescription>
+              <CardDescription>Recent system actions</CardDescription>
             </CardHeader>
             <CardContent>
               {auditLogs.length === 0 ? (
-                <div className="text-center py-12">
-                  <Activity className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-muted-foreground">No audit logs yet.</p>
+                <div className="text-center py-16">
+                  <Activity className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No audit logs yet.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {auditLogs.map(log => (
-                    <div key={log.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                    <div key={log.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/60 text-sm">
                       <div>
-                        <p className="font-medium">{log.action}</p>
+                        <p className="font-medium text-sm">{log.action}</p>
                         <p className="text-xs text-muted-foreground">
-                          {log.actor_role && <span className="capitalize">{log.actor_role} • </span>}
-                          {log.target_type && <span>{log.target_type} • </span>}
+                          {log.actor_role && <span className="capitalize">{log.actor_role} · </span>}
+                          {log.target_type && <span>{log.target_type} · </span>}
                           {new Date(log.created_at).toLocaleString()}
                         </p>
                       </div>

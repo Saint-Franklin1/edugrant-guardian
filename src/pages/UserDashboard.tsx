@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import StatusBadge from '@/components/common/StatusBadge';
 import { requiredDocumentTypes, documentTypes } from '@/lib/kenya-data';
-import { AlertTriangle, CheckCircle, FileText, Upload, User, School, Hash, GraduationCap } from 'lucide-react';
+import { AlertTriangle, CheckCircle, FileText, Upload, User, School, Hash, GraduationCap, Loader2 } from 'lucide-react';
 import type { Database } from '@/integrations/supabase/types';
 
 type StudentProfile = Database['public']['Tables']['student_profiles']['Row'];
@@ -93,13 +93,8 @@ const UserDashboard = () => {
   if (loading) {
     return (
       <DashboardLayout title="Student Dashboard">
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
-              <GraduationCap className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-muted-foreground text-sm">Loading your dashboard...</p>
-          </div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     );
@@ -108,30 +103,30 @@ const UserDashboard = () => {
   if (!student) {
     return (
       <DashboardLayout title="Welcome to Elimu Vault">
-        <div className="max-w-xl mx-auto">
-          <Card className="border-0 shadow-lg">
+        <div className="max-w-lg mx-auto">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader className="text-center pb-2">
-              <div className="h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <GraduationCap className="h-7 w-7 text-primary" />
+              <div className="h-12 w-12 rounded-2xl bg-primary/8 flex items-center justify-center mx-auto mb-3">
+                <GraduationCap className="h-6 w-6 text-primary" />
               </div>
-              <CardTitle className="font-heading text-xl">Create Student Profile</CardTitle>
-              <CardDescription>Let's set up your student profile to get started with your bursary application.</CardDescription>
+              <CardTitle className="text-xl">Create Student Profile</CardTitle>
+              <CardDescription>Set up your student profile to begin your bursary application.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={createStudentProfile} className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" />Student Name</Label>
-                  <Input value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Full name as on birth certificate" required />
+                  <Label className="flex items-center gap-2 text-sm"><User className="h-3.5 w-3.5 text-muted-foreground" />Student Name</Label>
+                  <Input value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Full name as on birth certificate" required className="h-11 rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground" />Birth Certificate Number</Label>
-                  <Input value={birthCert} onChange={e => setBirthCert(e.target.value)} placeholder="e.g. 12345678" />
+                  <Label className="flex items-center gap-2 text-sm"><Hash className="h-3.5 w-3.5 text-muted-foreground" />Birth Certificate Number</Label>
+                  <Input value={birthCert} onChange={e => setBirthCert(e.target.value)} placeholder="e.g. 12345678" className="h-11 rounded-xl" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="flex items-center gap-2"><School className="h-4 w-4 text-muted-foreground" />School Name</Label>
-                  <Input value={schoolName} onChange={e => setSchoolName(e.target.value)} placeholder="Current school name" />
+                  <Label className="flex items-center gap-2 text-sm"><School className="h-3.5 w-3.5 text-muted-foreground" />School Name</Label>
+                  <Input value={schoolName} onChange={e => setSchoolName(e.target.value)} placeholder="Current school name" className="h-11 rounded-xl" />
                 </div>
-                <Button type="submit" className="w-full" size="lg" disabled={creating}>
+                <Button type="submit" className="w-full h-11 rounded-xl" disabled={creating}>
                   {creating ? 'Creating...' : 'Create Profile'}
                 </Button>
               </form>
@@ -146,29 +141,29 @@ const UserDashboard = () => {
     <DashboardLayout title="Student Dashboard">
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          {/* Profile Status Card */}
-          <Card className="border-0 shadow-md overflow-hidden">
-            <div className="h-1.5 bg-primary" />
-            <CardHeader className="flex flex-row items-start justify-between gap-4">
-              <div className="space-y-1">
-                <CardTitle className="font-heading text-xl">{student.student_name}</CardTitle>
-                <CardDescription>{student.school_name}</CardDescription>
+          {/* Profile Card */}
+          <Card className="rounded-2xl shadow-sm overflow-hidden">
+            <div className="h-1 bg-primary" />
+            <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
+              <div>
+                <CardTitle className="text-xl">{student.student_name}</CardTitle>
+                <CardDescription className="mt-1">{student.school_name}</CardDescription>
               </div>
               <StatusBadge status={student.status} />
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { icon: Hash, label: 'Birth Cert', value: student.birth_cert_number || 'Not set' },
-                  { icon: FileText, label: 'Education ID', value: student.education_id || 'Pending verification' },
+                  { icon: FileText, label: 'Education ID', value: student.education_id || 'Pending' },
                   { icon: School, label: 'School', value: student.school_name || 'Not set' },
                   { icon: Upload, label: 'Documents', value: `${uploadedTypes.length} uploaded` },
                 ].map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-secondary/60">
                     <item.icon className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div>
                       <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className="text-sm font-medium">{item.value}</p>
+                      <p className="text-sm font-medium mt-0.5">{item.value}</p>
                     </div>
                   </div>
                 ))}
@@ -176,36 +171,30 @@ const UserDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Progress Tracker */}
+          {/* Progress */}
           <StatusTracker status={student.status} />
 
           {/* Upload Progress */}
           {student.status === 'draft' && (
-            <Card className="border-0 shadow-md">
-              <CardHeader>
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-heading">Document Upload Progress</CardTitle>
-                  <Badge variant={allRequiredUploaded ? 'default' : 'secondary'} className="text-xs">
-                    {uploadProgress}% Complete
+                  <CardTitle className="text-base">Document Checklist</CardTitle>
+                  <Badge variant={allRequiredUploaded ? 'default' : 'secondary'} className="text-xs rounded-full">
+                    {uploadProgress}%
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Progress bar */}
-                <div className="h-2 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all duration-500"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
+                <div className="h-1.5 rounded-full bg-secondary overflow-hidden">
+                  <div className="h-full rounded-full bg-primary transition-all duration-500" style={{ width: `${uploadProgress}%` }} />
                 </div>
-
-                {/* Checklist */}
                 <div className="grid sm:grid-cols-2 gap-2">
                   {documentTypes.map(dt => {
                     const uploaded = uploadedTypes.includes(dt.value);
                     return (
-                      <div key={dt.value} className={`flex items-center gap-2.5 p-2.5 rounded-lg text-sm transition-colors ${
-                        uploaded ? 'bg-emerald-50 border border-emerald-200' : dt.required ? 'bg-red-50/50 border border-red-100' : 'bg-muted/50'
+                      <div key={dt.value} className={`flex items-center gap-2.5 p-3 rounded-xl text-sm transition-colors ${
+                        uploaded ? 'bg-emerald-50 border border-emerald-200' : dt.required ? 'bg-red-50/60 border border-red-100' : 'bg-secondary/60'
                       }`}>
                         {uploaded ? (
                           <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
@@ -226,29 +215,27 @@ const UserDashboard = () => {
           )}
 
           {/* Upload Form */}
-          {student.status === 'draft' && (
-            <UploadForm studentId={student.id} onUploaded={fetchData} />
-          )}
+          {student.status === 'draft' && <UploadForm studentId={student.id} onUploaded={fetchData} />}
 
           {/* Documents */}
           <DocumentList studentId={student.id} />
 
-          {/* Submit Button */}
+          {/* Submit */}
           {student.status === 'draft' && (
-            <Button onClick={handleSubmit} className="w-full" size="lg" disabled={!allRequiredUploaded}>
+            <Button onClick={handleSubmit} className="w-full h-12 rounded-xl text-base" disabled={!allRequiredUploaded}>
               {allRequiredUploaded ? 'Submit Application for Review' : `Upload ${missingRequired.length} more required document(s)`}
             </Button>
           )}
 
           {/* Comments */}
           {comments.length > 0 && (
-            <Card className="border-0 shadow-md">
-              <CardHeader><CardTitle className="text-base font-heading">Comments from Reviewers</CardTitle></CardHeader>
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader><CardTitle className="text-base">Comments from Reviewers</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {comments.map(c => (
-                  <div key={c.id} className="p-4 rounded-xl bg-muted/50 border">
+                  <div key={c.id} className="p-4 rounded-xl bg-secondary/60">
                     <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                      <Badge variant="outline" className="text-xs capitalize">{c.role}</Badge>
+                      <Badge variant="outline" className="text-xs capitalize rounded-full">{c.role}</Badge>
                       <span>{new Date(c.created_at).toLocaleDateString()}</span>
                     </div>
                     <p className="text-sm">{c.comment_text}</p>

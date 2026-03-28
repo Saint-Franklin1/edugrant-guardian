@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin, ArrowLeft, MessageSquare, Banknote } from 'lucide-react';
+import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin, ArrowLeft, MessageSquare, Banknote, Loader2 } from 'lucide-react';
 
 const bursarySteps = ['verified', 'approved_for_funding', 'allocated', 'disbursed', 'completed'];
 
@@ -93,13 +93,8 @@ const AdminDashboard = () => {
   if (loading) {
     return (
       <DashboardLayout title="Admin Dashboard">
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
-              <Shield className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-muted-foreground text-sm">Loading dashboard data...</p>
-          </div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     );
@@ -115,31 +110,31 @@ const AdminDashboard = () => {
   if (selected) {
     return (
       <DashboardLayout title="Application Review">
-        <Button variant="ghost" onClick={() => setSelected(null)} className="mb-6 gap-2">
+        <Button variant="ghost" onClick={() => setSelected(null)} className="mb-6 gap-2 -ml-2">
           <ArrowLeft className="h-4 w-4" /> Back to Queue
         </Button>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-0 shadow-md overflow-hidden">
-              <div className="h-1.5 bg-primary" />
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <Card className="rounded-2xl shadow-sm overflow-hidden">
+              <div className="h-1 bg-primary" />
+              <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
                 <div>
-                  <CardTitle className="font-heading text-xl">{selected.student_name}</CardTitle>
-                  <CardDescription>{selected.school_name}</CardDescription>
+                  <CardTitle className="text-xl">{selected.student_name}</CardTitle>
+                  <CardDescription className="mt-1">{selected.school_name}</CardDescription>
                 </div>
                 <StatusBadge status={selected.status} />
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Birth Cert', value: selected.birth_cert_number },
                     { label: 'Ward', value: selected.studentProfile?.ward },
                     { label: 'Constituency', value: selected.studentProfile?.constituency },
                     { label: 'County', value: selected.studentProfile?.county },
                   ].map((item, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-muted/50">
+                    <div key={i} className="p-3 rounded-xl bg-secondary/60">
                       <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className="text-sm font-medium">{item.value || '—'}</p>
+                      <p className="text-sm font-medium mt-0.5">{item.value || '—'}</p>
                     </div>
                   ))}
                 </div>
@@ -148,25 +143,25 @@ const AdminDashboard = () => {
             <DocumentList studentId={selected.id} />
           </div>
           <div className="space-y-4">
-            <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base font-heading flex items-center gap-2">
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" /> Add Comment
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Type your review comment..." rows={3} />
-                <Button onClick={handleComment} variant="secondary" className="w-full" disabled={!comment.trim()}>
+                <Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Type your review comment..." rows={3} className="rounded-xl" />
+                <Button onClick={handleComment} variant="secondary" className="w-full rounded-xl" disabled={!comment.trim()}>
                   Submit Comment
                 </Button>
               </CardContent>
             </Card>
             {selected.status === 'under_review' && (
               <div className="grid grid-cols-2 gap-3">
-                <Button onClick={() => handleFinalApproval('approved')} className="gap-1.5">
+                <Button onClick={() => handleFinalApproval('approved')} className="gap-1.5 rounded-xl">
                   <CheckCircle className="h-4 w-4" /> Approve
                 </Button>
-                <Button onClick={() => handleFinalApproval('rejected')} variant="destructive" className="gap-1.5">
+                <Button onClick={() => handleFinalApproval('rejected')} variant="destructive" className="gap-1.5 rounded-xl">
                   <XCircle className="h-4 w-4" /> Reject
                 </Button>
               </div>
@@ -179,31 +174,31 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout title="Admin Dashboard">
-      {/* Scope Label */}
+      {/* Scope */}
       {scopeLabel && (
-        <div className="flex items-center gap-2 mb-6 p-3 rounded-xl bg-primary/5 border border-primary/10">
+        <div className="flex items-center gap-2 mb-8 px-4 py-3 rounded-2xl bg-primary/5 border border-primary/10">
           <MapPin className="h-4 w-4 text-primary shrink-0" />
           <span className="text-sm font-medium text-primary">Viewing: {scopeLabel}</span>
-          <Badge variant="outline" className="ml-auto text-xs capitalize">{profile?.admin_level} Admin</Badge>
+          <Badge variant="outline" className="ml-auto text-xs capitalize rounded-full">{profile?.admin_level} Admin</Badge>
         </div>
       )}
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {[
-          { label: 'Total Applications', value: stats.total, icon: Users, color: 'bg-primary/10 text-primary' },
-          { label: 'Pending Review', value: stats.pending, icon: Shield, color: 'bg-amber-50 text-amber-600' },
-          { label: 'Verified', value: stats.verified, icon: CheckCircle, color: 'bg-emerald-50 text-emerald-600' },
-          { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'bg-red-50 text-red-600' },
+          { label: 'Total Applications', value: stats.total, icon: Users },
+          { label: 'Pending Review', value: stats.pending, icon: Shield },
+          { label: 'Verified', value: stats.verified, icon: CheckCircle },
+          { label: 'Rejected', value: stats.rejected, icon: XCircle },
         ].map(s => (
-          <Card key={s.label} className="border-0 shadow-md">
-            <CardContent className="pt-6">
+          <Card key={s.label} className="rounded-2xl shadow-sm">
+            <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${s.color}`}>
-                  <s.icon className="h-5 w-5" />
+                <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
+                  <s.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-2xl font-heading font-bold">{s.value}</p>
+                  <p className="text-2xl font-bold">{s.value}</p>
                   <p className="text-xs text-muted-foreground">{s.label}</p>
                 </div>
               </div>
@@ -214,41 +209,40 @@ const AdminDashboard = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="applications">
-        <TabsList className="mb-4">
-          <TabsTrigger value="applications">Applications</TabsTrigger>
-          <TabsTrigger value="bursary" className="gap-1.5">
+        <TabsList className="mb-6 rounded-xl">
+          <TabsTrigger value="applications" className="rounded-lg">Applications</TabsTrigger>
+          <TabsTrigger value="bursary" className="gap-1.5 rounded-lg">
             <Banknote className="h-3.5 w-3.5" /> Bursary
           </TabsTrigger>
-          <TabsTrigger value="flags" className="gap-1.5">
+          <TabsTrigger value="flags" className="gap-1.5 rounded-lg">
             <AlertTriangle className="h-3.5 w-3.5" /> Flags
             {fraudFlags.length > 0 && <Badge variant="destructive" className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">{fraudFlags.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="applications">
-          <Card className="border-0 shadow-md">
-            <CardContent className="pt-6">
+          <Card className="rounded-2xl shadow-sm">
+            <CardContent className="p-5">
               {students.length === 0 ? (
-                <div className="text-center py-12">
-                  <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="font-medium text-muted-foreground">No applications yet</p>
-                  <p className="text-sm text-muted-foreground/70 mt-1">Applications within your {profile?.admin_level} will appear here.</p>
+                <div className="text-center py-16">
+                  <Users className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No applications yet</p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   {students.map(s => (
                     <div
                       key={s.id}
-                      className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer group"
+                      className="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/60 transition-colors cursor-pointer group"
                       onClick={() => setSelected(s)}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-heading font-bold text-sm">
+                        <div className="h-9 w-9 rounded-full bg-primary/8 flex items-center justify-center text-primary font-semibold text-sm">
                           {s.student_name?.charAt(0)}
                         </div>
                         <div>
-                          <p className="font-medium">{s.student_name}</p>
-                          <p className="text-sm text-muted-foreground">{s.school_name} {s.studentProfile?.ward ? `• ${s.studentProfile.ward}` : ''}</p>
+                          <p className="font-medium text-sm">{s.student_name}</p>
+                          <p className="text-xs text-muted-foreground">{s.school_name} {s.studentProfile?.ward ? `· ${s.studentProfile.ward}` : ''}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
@@ -264,17 +258,17 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="bursary">
-          <Card className="border-0 shadow-md">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
-                <TrendingUp className="h-5 w-5 text-primary" /> Bursary Lifecycle
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TrendingUp className="h-4 w-4 text-primary" /> Bursary Lifecycle
               </CardTitle>
             </CardHeader>
             <CardContent>
               {bursaryRecords.length === 0 ? (
-                <div className="text-center py-12">
-                  <Banknote className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-muted-foreground">No bursary records yet.</p>
+                <div className="text-center py-16">
+                  <Banknote className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No bursary records yet.</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -282,11 +276,11 @@ const AdminDashboard = () => {
                     const currentIdx = bursarySteps.indexOf(b.status);
                     const nextStatus = bursarySteps[currentIdx + 1];
                     return (
-                      <div key={b.id} className="p-4 rounded-xl bg-muted/50 border space-y-3">
+                      <div key={b.id} className="p-4 rounded-xl bg-secondary/60 space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{b.student_profiles?.student_name}</p>
-                            <p className="text-sm text-muted-foreground">{b.student_profiles?.school_name}</p>
+                            <p className="font-medium text-sm">{b.student_profiles?.student_name}</p>
+                            <p className="text-xs text-muted-foreground">{b.student_profiles?.school_name}</p>
                           </div>
                           <StatusBadge status={b.status} />
                         </div>
@@ -294,14 +288,14 @@ const AdminDashboard = () => {
                           <p className="text-sm font-medium">Amount: KES {Number(b.allocated_amount).toLocaleString()}</p>
                         )}
                         {nextStatus && (
-                          <div className="flex gap-2 items-end pt-2 border-t">
+                          <div className="flex gap-2 items-end pt-2 border-t border-border">
                             {nextStatus === 'allocated' && (
                               <div className="flex-1">
                                 <Label className="text-xs">Amount (KES)</Label>
-                                <Input type="number" placeholder="Enter amount" value={allocAmount} onChange={e => setAllocAmount(e.target.value)} className="h-9" />
+                                <Input type="number" placeholder="Enter amount" value={allocAmount} onChange={e => setAllocAmount(e.target.value)} className="h-9 rounded-xl" />
                               </div>
                             )}
-                            <Button size="sm" onClick={() => updateBursaryStatus(b.id, nextStatus, nextStatus === 'allocated' ? Number(allocAmount) : undefined)}>
+                            <Button size="sm" className="rounded-xl" onClick={() => updateBursaryStatus(b.id, nextStatus, nextStatus === 'allocated' ? Number(allocAmount) : undefined)}>
                               Move to {nextStatus.replace(/_/g, ' ')}
                             </Button>
                           </div>
@@ -316,27 +310,27 @@ const AdminDashboard = () => {
         </TabsContent>
 
         <TabsContent value="flags">
-          <Card className="border-0 shadow-md">
+          <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 font-heading">
-                <AlertTriangle className="h-5 w-5 text-destructive" /> Fraud Flags
+              <CardTitle className="flex items-center gap-2 text-base">
+                <AlertTriangle className="h-4 w-4 text-destructive" /> Fraud Flags
               </CardTitle>
             </CardHeader>
             <CardContent>
               {fraudFlags.length === 0 ? (
-                <div className="text-center py-12">
-                  <Shield className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-muted-foreground">No fraud flags detected — all clear.</p>
+                <div className="text-center py-16">
+                  <Shield className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No fraud flags — all clear.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {fraudFlags.map(f => (
                     <div key={f.id} className="p-4 rounded-xl bg-red-50 border border-red-200">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                        <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-medium text-red-800">{f.flag_type}</p>
-                          <p className="text-sm text-red-600 mt-0.5">{f.details}</p>
+                          <p className="font-medium text-sm text-red-800">{f.flag_type}</p>
+                          <p className="text-xs text-red-600 mt-0.5">{f.details}</p>
                           <p className="text-xs text-red-500 mt-2">Student: {f.student_profiles?.student_name}</p>
                         </div>
                       </div>
