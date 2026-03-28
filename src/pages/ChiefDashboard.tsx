@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
-import { Users, Eye, MessageSquare, MapPin, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Shield } from 'lucide-react';
+import { Users, Eye, MessageSquare, MapPin, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
 const ChiefDashboard = () => {
   const { user, profile, role } = useAuth();
@@ -61,13 +61,8 @@ const ChiefDashboard = () => {
   if (loading) {
     return (
       <DashboardLayout title="Chief Dashboard">
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <div className="h-10 w-10 rounded-xl bg-accent/10 flex items-center justify-center mx-auto mb-3 animate-pulse">
-              <Shield className="h-5 w-5 text-accent" />
-            </div>
-            <p className="text-muted-foreground text-sm">Loading verification queue...</p>
-          </div>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       </DashboardLayout>
     );
@@ -82,29 +77,29 @@ const ChiefDashboard = () => {
   if (selected) {
     return (
       <DashboardLayout title="Review Application">
-        <Button variant="ghost" onClick={() => setSelected(null)} className="mb-6 gap-2">
+        <Button variant="ghost" onClick={() => setSelected(null)} className="mb-6 gap-2 -ml-2">
           <ArrowLeft className="h-4 w-4" /> Back to Queue
         </Button>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-0 shadow-md overflow-hidden">
-              <div className="h-1.5 bg-accent" />
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <Card className="rounded-2xl shadow-sm overflow-hidden">
+              <div className="h-1 bg-accent" />
+              <CardHeader className="flex flex-row items-start justify-between gap-4 pb-4">
                 <div>
-                  <CardTitle className="font-heading text-xl">{selected.student_name}</CardTitle>
-                  <CardDescription>{selected.school_name}</CardDescription>
+                  <CardTitle className="text-xl">{selected.student_name}</CardTitle>
+                  <CardDescription className="mt-1">{selected.school_name}</CardDescription>
                 </div>
                 <StatusBadge status={selected.status} />
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Birth Cert', value: selected.birth_cert_number },
                     { label: 'School', value: selected.school_name },
                   ].map((item, i) => (
-                    <div key={i} className="p-3 rounded-lg bg-muted/50">
+                    <div key={i} className="p-3 rounded-xl bg-secondary/60">
                       <p className="text-xs text-muted-foreground">{item.label}</p>
-                      <p className="text-sm font-medium">{item.value || '—'}</p>
+                      <p className="text-sm font-medium mt-0.5">{item.value || '—'}</p>
                     </div>
                   ))}
                 </div>
@@ -113,24 +108,24 @@ const ChiefDashboard = () => {
             <DocumentList studentId={selected.id} />
           </div>
           <div className="space-y-4">
-            <Card className="border-0 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-base font-heading flex items-center gap-2">
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" /> Add Comment
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Type your review comment..." rows={3} />
-                <Button onClick={handleComment} variant="secondary" className="w-full" disabled={!comment.trim()}>
+                <Textarea value={comment} onChange={e => setComment(e.target.value)} placeholder="Type your review comment..." rows={3} className="rounded-xl" />
+                <Button onClick={handleComment} variant="secondary" className="w-full rounded-xl" disabled={!comment.trim()}>
                   Submit Comment
                 </Button>
               </CardContent>
             </Card>
             <div className="grid grid-cols-2 gap-3">
-              <Button onClick={() => handleDecision('approved')} className="gap-1.5">
+              <Button onClick={() => handleDecision('approved')} className="gap-1.5 rounded-xl">
                 <CheckCircle className="h-4 w-4" /> Approve
               </Button>
-              <Button onClick={() => handleDecision('rejected')} variant="destructive" className="gap-1.5">
+              <Button onClick={() => handleDecision('rejected')} variant="destructive" className="gap-1.5 rounded-xl">
                 <XCircle className="h-4 w-4" /> Reject
               </Button>
             </div>
@@ -142,30 +137,30 @@ const ChiefDashboard = () => {
 
   return (
     <DashboardLayout title="Chief Dashboard">
-      {/* Scope Label */}
+      {/* Scope */}
       {scopeLabel && (
-        <div className="flex items-center gap-2 mb-6 p-3 rounded-xl bg-accent/5 border border-accent/10">
+        <div className="flex items-center gap-2 mb-8 px-4 py-3 rounded-2xl bg-accent/5 border border-accent/10">
           <MapPin className="h-4 w-4 text-accent shrink-0" />
           <span className="text-sm font-medium text-accent">Viewing: {scopeLabel}</span>
-          <Badge variant="outline" className="ml-auto text-xs">Chief</Badge>
+          <Badge variant="outline" className="ml-auto text-xs rounded-full">Chief</Badge>
         </div>
       )}
 
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3 mb-8">
         {[
-          { label: 'Total in Queue', value: stats.total, icon: Users, color: 'bg-accent/10 text-accent' },
-          { label: 'New Submissions', value: stats.submitted, icon: Eye, color: 'bg-blue-50 text-blue-600' },
-          { label: 'Under Review', value: stats.underReview, icon: AlertTriangle, color: 'bg-amber-50 text-amber-600' },
+          { label: 'Total in Queue', value: stats.total, icon: Users },
+          { label: 'New Submissions', value: stats.submitted, icon: Eye },
+          { label: 'Under Review', value: stats.underReview, icon: AlertTriangle },
         ].map(s => (
-          <Card key={s.label} className="border-0 shadow-md">
-            <CardContent className="pt-6">
+          <Card key={s.label} className="rounded-2xl shadow-sm">
+            <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className={`h-11 w-11 rounded-xl flex items-center justify-center ${s.color}`}>
-                  <s.icon className="h-5 w-5" />
+                <div className="h-10 w-10 rounded-xl bg-accent/8 flex items-center justify-center">
+                  <s.icon className="h-5 w-5 text-accent" />
                 </div>
                 <div>
-                  <p className="text-2xl font-heading font-bold">{s.value}</p>
+                  <p className="text-2xl font-bold">{s.value}</p>
                   <p className="text-xs text-muted-foreground">{s.label}</p>
                 </div>
               </div>
@@ -175,34 +170,33 @@ const ChiefDashboard = () => {
       </div>
 
       {/* Queue */}
-      <Card className="border-0 shadow-md">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-heading">
-            <Users className="h-5 w-5 text-accent" /> Verification Queue
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Users className="h-4 w-4 text-accent" /> Verification Queue
           </CardTitle>
         </CardHeader>
         <CardContent>
           {students.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-              <p className="font-medium text-muted-foreground">No pending applications</p>
-              <p className="text-sm text-muted-foreground/70 mt-1">Applications from your ward will appear here.</p>
+            <div className="text-center py-16">
+              <Users className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No pending applications</p>
             </div>
           ) : (
             <div className="space-y-2">
               {students.map(s => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors cursor-pointer group"
+                  className="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/60 transition-colors cursor-pointer group"
                   onClick={() => setSelected(s)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center text-accent font-heading font-bold text-sm">
+                    <div className="h-9 w-9 rounded-full bg-accent/8 flex items-center justify-center text-accent font-semibold text-sm">
                       {s.student_name?.charAt(0)}
                     </div>
                     <div>
-                      <p className="font-medium">{s.student_name}</p>
-                      <p className="text-sm text-muted-foreground">{s.school_name}</p>
+                      <p className="font-medium text-sm">{s.student_name}</p>
+                      <p className="text-xs text-muted-foreground">{s.school_name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">

@@ -17,28 +17,27 @@ const QRDisplay = ({ student, ward, constituency }: QRDisplayProps) => {
     educationId: student.education_id,
     name: student.student_name,
     status: student.status,
-    ward,
-    constituency,
+    ward, constituency,
     verifiedAt: student.updated_at,
   });
 
   return (
-    <Card className="border-0 shadow-md overflow-hidden">
+    <Card className="rounded-2xl shadow-sm overflow-hidden">
       <div className="bg-primary p-4 text-center">
         <div className="flex items-center justify-center gap-2 text-primary-foreground">
-          <ShieldCheck className="h-5 w-5" />
-          <span className="font-heading font-bold">Education ID</span>
+          <ShieldCheck className="h-4 w-4" />
+          <span className="font-semibold text-sm">Education ID</span>
         </div>
       </div>
       <CardContent className="pt-6 text-center space-y-4">
-        <div className="inline-block p-3 bg-card rounded-xl border-2 border-primary/10">
-          <QRCodeSVG value={qrData} size={160} level="M" />
+        <div className="inline-block p-3 bg-card rounded-2xl border-2 border-primary/10">
+          <QRCodeSVG value={qrData} size={140} level="M" />
         </div>
-        <div className="space-y-2">
-          <p className="font-heading font-bold text-xl text-primary">{student.education_id}</p>
-          <p className="font-medium">{student.student_name}</p>
-          <p className="text-sm text-muted-foreground">{ward}, {constituency}</p>
-          <Badge variant="outline" className="text-xs">
+        <div className="space-y-1.5">
+          <p className="font-bold text-lg text-primary">{student.education_id}</p>
+          <p className="font-medium text-sm">{student.student_name}</p>
+          <p className="text-xs text-muted-foreground">{ward}, {constituency}</p>
+          <Badge variant="outline" className="text-xs rounded-full">
             Verified {new Date(student.updated_at).toLocaleDateString()}
           </Badge>
         </div>
