@@ -51,6 +51,10 @@ const UserDashboard = () => {
 
   useEffect(() => { fetchData(); }, [user]);
 
+  const handleRealtimeUpdate = useCallback(() => { fetchData(); }, [user]);
+  useRealtimeTable('documents', handleRealtimeUpdate);
+  useRealtimeTable('comments', handleRealtimeUpdate);
+
   const missingRequired = requiredDocumentTypes.filter(t => !uploadedTypes.includes(t));
   const allRequiredUploaded = missingRequired.length === 0;
   const uploadProgress = Math.round(((requiredDocumentTypes.length - missingRequired.length) / requiredDocumentTypes.length) * 100);

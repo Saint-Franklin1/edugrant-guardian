@@ -84,6 +84,10 @@ const SuperAdminDashboard = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  const handleRealtimeUpdate = useCallback(() => { fetchData(); }, []);
+  useRealtimeTable('documents', handleRealtimeUpdate);
+  useRealtimeTable('comments', handleRealtimeUpdate);
+
   const getSelectedNames = () => {
     const county = counties.find(c => c.id === selectedCountyId)?.name || '';
     const constituency = constituencies.find(c => c.id === selectedConstituencyId)?.name || '';

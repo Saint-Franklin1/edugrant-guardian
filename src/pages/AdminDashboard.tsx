@@ -57,6 +57,10 @@ const AdminDashboard = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  const handleRealtimeUpdate = useCallback(() => { fetchData(); }, []);
+  useRealtimeTable('documents', handleRealtimeUpdate);
+  useRealtimeTable('comments', handleRealtimeUpdate);
+
   const handleFinalApproval = async (decision: 'approved' | 'rejected') => {
     if (!selected || !user) return;
     const newStatus = decision === 'approved' ? 'verified' : 'rejected';

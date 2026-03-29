@@ -33,6 +33,10 @@ const ChiefDashboard = () => {
 
   useEffect(() => { fetchStudents(); }, []);
 
+  const handleRealtimeUpdate = useCallback(() => { fetchStudents(); }, []);
+  useRealtimeTable('documents', handleRealtimeUpdate);
+  useRealtimeTable('comments', handleRealtimeUpdate);
+
   const handleDecision = async (decision: 'approved' | 'rejected') => {
     if (!selected || !user) return;
     const newStatus = decision === 'approved' ? 'under_review' : 'rejected';
