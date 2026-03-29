@@ -14,6 +14,8 @@ import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin, ArrowLeft, MessageSquare, Banknote, Loader2 } from 'lucide-react';
+import { useRealtimeTable } from '@/hooks/use-realtime';
+import { useCallback } from 'react';
 
 const bursarySteps = ['verified', 'approved_for_funding', 'allocated', 'disbursed', 'completed'];
 
