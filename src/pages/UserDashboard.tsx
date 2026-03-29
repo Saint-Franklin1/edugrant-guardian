@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import StatusBadge from '@/components/common/StatusBadge';
 import { requiredDocumentTypes, documentTypes } from '@/lib/kenya-data';
 import { AlertTriangle, CheckCircle, FileText, Upload, User, School, Hash, GraduationCap, Loader2 } from 'lucide-react';
+import { useRealtimeTable } from '@/hooks/use-realtime';
+import { useCallback } from 'react';
 import type { Database } from '@/integrations/supabase/types';
 
 type StudentProfile = Database['public']['Tables']['student_profiles']['Row'];
