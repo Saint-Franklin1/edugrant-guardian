@@ -65,8 +65,8 @@ const LandingPage = () => {
             ].map((item, i) => (
               <Card key={i} className="rounded-2xl border-2 border-border shadow-sm text-center hover:shadow-md transition-shadow">
                 <CardContent className="p-8 space-y-4">
-                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-amber-50 mx-auto">
-                    <item.icon className="h-7 w-7 text-amber-600" />
+                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-warning/10 mx-auto">
+                    <item.icon className="h-7 w-7 text-warning" />
                   </div>
                   <h3 className="font-bold text-base">{item.title}</h3>
                   <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
