@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -14,6 +14,7 @@ import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building, 
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
 } from 'lucide-react';
+import { useRealtimeTable } from '@/hooks/use-realtime';
 
 interface County { id: string; name: string; }
 interface Constituency { id: string; name: string; county_id: string; }
@@ -83,6 +84,10 @@ const SuperAdminDashboard = () => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const handleRealtimeUpdate = useCallback(() => { fetchData(); }, []);
+  useRealtimeTable('documents', handleRealtimeUpdate);
+  useRealtimeTable('comments', handleRealtimeUpdate);
 
   const getSelectedNames = () => {
     const county = counties.find(c => c.id === selectedCountyId)?.name || '';
