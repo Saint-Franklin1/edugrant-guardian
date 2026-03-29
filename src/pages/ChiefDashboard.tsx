@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
 import { Users, Eye, MessageSquare, MapPin, ArrowLeft, CheckCircle, XCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { useRealtimeTable } from '@/hooks/use-realtime';
+import { useCallback } from 'react';
 
 const ChiefDashboard = () => {
   const { user, profile, role } = useAuth();
