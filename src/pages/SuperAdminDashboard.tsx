@@ -14,6 +14,7 @@ import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building, 
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
 } from 'lucide-react';
+import { useRealtimeTable } from '@/hooks/use-realtime';
 
 interface County { id: string; name: string; }
 interface Constituency { id: string; name: string; county_id: string; }
