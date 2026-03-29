@@ -3,104 +3,85 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Upload, QrCode, ShieldCheck, FileCheck, Search, Lock, Eye,
-  GraduationCap, UserCog, Users, ArrowRight, CheckCircle2
+  GraduationCap, UserCog, Users, ArrowRight, CheckCircle2, ClipboardCheck
 } from 'lucide-react';
 
 const LandingPage = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="border-b bg-card sticky top-0 z-50">
-        <div className="container flex items-center justify-between h-14">
+      <nav className="py-6">
+        <div className="container flex flex-col items-center gap-4">
+          {/* Logo */}
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xs">EV</span>
+            <div className="h-10 w-10 rounded-lg bg-primary flex items-center justify-center">
+              <GraduationCap className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-base tracking-tight">Elimu Vault</span>
+            <span className="text-xl font-bold tracking-tight">
+              Elimu<br className="hidden" /> Vault
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Sign In</Button>
-            </Link>
-            <Link to="/register">
-              <Button size="sm">Get Started</Button>
-            </Link>
+          {/* Nav Links */}
+          <div className="flex items-center gap-8 text-sm font-medium text-muted-foreground">
+            <a href="#" className="hover:text-foreground transition-colors">Home</a>
+            <a href="#about" className="hover:text-foreground transition-colors">About Us</a>
+            <a href="#how-it-works" className="hover:text-foreground transition-colors">Bursaries</a>
+            <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
+            <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
           </div>
         </div>
       </nav>
 
       {/* Hero */}
-      <section className="py-20 lg:py-28">
+      <section className="py-16 lg:py-20">
         <div className="container">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-8">
-              <div className="space-y-5">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/8 text-primary text-sm font-medium">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Trusted by Government Institutions
-                </div>
-                <h1 className="text-4xl lg:text-[3.25rem] font-extrabold leading-[1.1] tracking-tight">
-                  Access Bursaries
-                  <br />
-                  <span className="text-primary">Without Paperwork</span>
-                </h1>
-                <p className="text-lg text-muted-foreground leading-relaxed max-w-md">
-                  Upload your documents once, get verified, and apply for bursaries anywhere — all from a single secure platform.
-                </p>
-              </div>
+          <div className="max-w-3xl mx-auto text-center space-y-6">
+            <h1 className="text-4xl md:text-5xl font-extrabold leading-tight tracking-tight">
+              Access Bursaries Without Paperwork
+            </h1>
+            <p className="text-muted-foreground text-base md:text-lg max-w-xl mx-auto leading-relaxed">
+              Streamline your application and secure your educational funding digitally, with full transparency and efficiency.
+            </p>
+          </div>
 
-              <div className="space-y-3">
-                {[
-                  'Upload once, use everywhere — no repeated paperwork',
-                  'Instant QR-based verification for any institution',
-                  'Transparent tracking from submission to disbursement',
-                ].map((b, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-accent shrink-0 mt-0.5" />
-                    <span className="text-sm text-muted-foreground">{b}</span>
+          {/* Three Feature Cards */}
+          <div className="grid md:grid-cols-3 gap-6 mt-14 max-w-4xl mx-auto">
+            {[
+              {
+                icon: Upload,
+                title: 'Upload Documents',
+                desc: 'Securely submit your required documents directly from your device.',
+              },
+              {
+                icon: ClipboardCheck,
+                title: 'Get Education ID',
+                desc: 'Instantly receive your unique digital Education ID for tracking.',
+              },
+              {
+                icon: ShieldCheck,
+                title: 'Approval Flow',
+                desc: 'Track the status of your bursary application in real-time.',
+              },
+            ].map((item, i) => (
+              <Card key={i} className="rounded-2xl border-2 border-border shadow-sm text-center hover:shadow-md transition-shadow">
+                <CardContent className="p-8 space-y-4">
+                  <div className="inline-flex items-center justify-center h-16 w-16 rounded-2xl bg-warning/10 mx-auto">
+                    <item.icon className="h-7 w-7 text-warning" />
                   </div>
-                ))}
-              </div>
+                  <h3 className="font-bold text-base">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-              <div className="flex flex-wrap gap-3 pt-2">
-                <Link to="/register">
-                  <Button size="lg" className="gap-2 h-12 px-6 rounded-xl">
-                    Get Started <ArrowRight className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <a href="#how-it-works">
-                  <Button size="lg" variant="outline" className="h-12 px-6 rounded-xl">
-                    Learn How It Works
-                  </Button>
-                </a>
-              </div>
-            </div>
-
-            {/* Flow illustration */}
-            <div className="hidden lg:block">
-              <div className="space-y-4">
-                {[
-                  { icon: Upload, label: 'Upload Documents', desc: 'Birth certificate, fee structure, IDs...', step: '01' },
-                  { icon: QrCode, label: 'Get Education ID', desc: 'Unique QR code for instant verification', step: '02' },
-                  { icon: ShieldCheck, label: 'Approval Flow', desc: 'Chief → Admin → Verified & Funded', step: '03' },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-5 p-6 bg-card rounded-2xl border shadow-sm animate-fade-in"
-                    style={{ animationDelay: `${i * 150}ms`, animationFillMode: 'backwards' }}
-                  >
-                    <div className="h-12 w-12 rounded-2xl bg-primary/8 flex items-center justify-center shrink-0">
-                      <item.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm">{item.label}</p>
-                      <p className="text-sm text-muted-foreground mt-0.5">{item.desc}</p>
-                    </div>
-                    <span className="text-xs font-bold text-muted-foreground/40">{item.step}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* CTA Button */}
+          <div className="flex justify-center mt-12">
+            <Link to="/register" className="w-full max-w-md">
+              <Button size="lg" className="w-full h-14 text-base font-semibold rounded-xl">
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
