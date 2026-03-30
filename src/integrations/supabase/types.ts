@@ -47,6 +47,105 @@ export type Database = {
         }
         Relationships: []
       }
+      bursary_applications: {
+        Row: {
+          applied_at: string
+          id: string
+          notes: string | null
+          program_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          student_id: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string
+          id?: string
+          notes?: string | null
+          program_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string
+          id?: string
+          notes?: string | null
+          program_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          student_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bursary_applications_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "bursary_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bursary_applications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bursary_programs: {
+        Row: {
+          constituency: string | null
+          county: string | null
+          created_at: string
+          created_by: string
+          deadline: string
+          description: string | null
+          id: string
+          per_student_amount: number | null
+          status: string
+          title: string
+          total_amount: number
+          updated_at: string
+          ward: string | null
+        }
+        Insert: {
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          created_by: string
+          deadline: string
+          description?: string | null
+          id?: string
+          per_student_amount?: number | null
+          status?: string
+          title: string
+          total_amount: number
+          updated_at?: string
+          ward?: string | null
+        }
+        Update: {
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          created_by?: string
+          deadline?: string
+          description?: string | null
+          id?: string
+          per_student_amount?: number | null
+          status?: string
+          title?: string
+          total_amount?: number
+          updated_at?: string
+          ward?: string | null
+        }
+        Relationships: []
+      }
       bursary_records: {
         Row: {
           allocated_amount: number | null
@@ -300,6 +399,7 @@ export type Database = {
           phone: string | null
           updated_at: string
           user_id: string
+          user_status: string
           ward: string
         }
         Insert: {
@@ -313,6 +413,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id: string
+          user_status?: string
           ward: string
         }
         Update: {
@@ -326,6 +427,7 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+          user_status?: string
           ward?: string
         }
         Relationships: []
