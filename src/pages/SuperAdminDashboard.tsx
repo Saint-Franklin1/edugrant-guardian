@@ -11,10 +11,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import {
-  Shield, Users, UserPlus, Mail, MapPin, Globe, Building, 
+  Shield, Users, UserPlus, Mail, MapPin, Globe, Building,
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
+  Trash2, Ban, UserX, RotateCcw, Search, QrCode, Eye,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import DocumentList from '@/components/user/DocumentList';
+import StatusBadge from '@/components/common/StatusBadge';
 
 interface County { id: string; name: string; }
 interface Constituency { id: string; name: string; county_id: string; }
@@ -40,6 +54,12 @@ const SuperAdminDashboard = () => {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Student Lookup
+  const [lookupId, setLookupId] = useState('');
+  const [lookupResult, setLookupResult] = useState<any>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   useEffect(() => {
     supabase.from('counties').select('*').order('name').then(({ data }) => setCounties(data || []));
@@ -125,6 +145,66 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleDeleteInvitation = async (invId: string) => {
+    const { error } = await supabase.from('invitations').delete().eq('id', invId);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Invitation deleted' });
+      fetchData();
+    }
+  };
+
+  const handleRevokeInvitation = async (invId: string) => {
+    const { error } = await supabase.from('invitations').update({ status: 'expired' }).eq('id', invId);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Invitation revoked' });
+      fetchData();
+    }
+  };
+
+  const handleUserAction = async (targetUserId: string, action: 'suspend' | 'ban' | 'activate' | 'delete') => {
+    setActionLoading(targetUserId);
+    const { data, error } = await supabase.functions.invoke('manage-user', {
+      body: { action, target_user_id: targetUserId },
+    });
+    setActionLoading(null);
+
+    if (error || data?.error) {
+      toast({ title: 'Error', description: data?.error || error?.message, variant: 'destructive' });
+    } else {
+      toast({ title: `User ${action === 'activate' ? 'activated' : action === 'delete' ? 'deleted' : action + 'ed'} successfully` });
+      fetchData();
+    }
+  };
+
+  const handleLookup = async () => {
+    if (!lookupId.trim()) return;
+    setLookupLoading(true);
+    setLookupResult(null);
+    const { data, error } = await supabase.functions.invoke('lookup-student', {
+      body: {},
+      headers: {},
+    });
+    // Use GET with query params via fetch
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lookup-student?education_id=${encodeURIComponent(lookupId.trim())}`;
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+    });
+    const result = await res.json();
+    setLookupLoading(false);
+    if (result.error) {
+      toast({ title: 'Not found', description: result.error, variant: 'destructive' });
+    } else {
+      setLookupResult(result);
+    }
+  };
+
   const showConstituency = inviteLevel === 'constituency' || inviteLevel === 'ward';
   const showWard = inviteLevel === 'ward';
 
@@ -164,7 +244,7 @@ const SuperAdminDashboard = () => {
           <Card key={s.label} className="rounded-2xl shadow-sm">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <s.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
@@ -178,13 +258,16 @@ const SuperAdminDashboard = () => {
       </div>
 
       <Tabs defaultValue="invite">
-        <TabsList className="mb-6 rounded-xl">
+        <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="invite" className="gap-1.5 rounded-lg"><UserPlus className="h-3.5 w-3.5" /> Invite</TabsTrigger>
-          <TabsTrigger value="admins" className="gap-1.5 rounded-lg"><Shield className="h-3.5 w-3.5" /> Admins</TabsTrigger>
+          <TabsTrigger value="admins" className="gap-1.5 rounded-lg"><Shield className="h-3.5 w-3.5" /> Staff</TabsTrigger>
+          <TabsTrigger value="users" className="gap-1.5 rounded-lg"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
           <TabsTrigger value="invitations" className="gap-1.5 rounded-lg"><Mail className="h-3.5 w-3.5" /> Invitations</TabsTrigger>
+          <TabsTrigger value="lookup" className="gap-1.5 rounded-lg"><Search className="h-3.5 w-3.5" /> Lookup</TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5 rounded-lg"><Activity className="h-3.5 w-3.5" /> Audit</TabsTrigger>
         </TabsList>
 
+        {/* INVITE TAB */}
         <TabsContent value="invite">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
@@ -205,7 +288,7 @@ const SuperAdminDashboard = () => {
                   <SelectContent>
                     <SelectItem value="county"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> County Admin</div></SelectItem>
                     <SelectItem value="constituency"><div className="flex items-center gap-2"><Building className="h-4 w-4" /> Constituency Admin</div></SelectItem>
-                    <SelectItem value="ward"><div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Ward Admin</div></SelectItem>
+                    <SelectItem value="ward"><div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Ward Admin / Chief</div></SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -248,53 +331,188 @@ const SuperAdminDashboard = () => {
           </Card>
         </TabsContent>
 
+        {/* STAFF TAB - Admins & Chiefs with actions */}
         <TabsContent value="admins">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Shield className="h-4 w-4 text-primary" /> Active Admins & Chiefs
+                <Shield className="h-4 w-4 text-primary" /> Active Staff (Admins & Chiefs)
               </CardTitle>
+              <CardDescription>Manage staff accounts — suspend, ban, or permanently delete.</CardDescription>
             </CardHeader>
             <CardContent>
               {admins.length === 0 ? (
                 <div className="text-center py-16">
                   <Users className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">No admins yet. Send an invitation to get started.</p>
+                  <p className="text-sm text-muted-foreground">No admins yet.</p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {admins.map((a, i) => (
-                    <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/8 flex items-center justify-center text-primary font-semibold text-sm">
-                          {a.profile?.name?.charAt(0) || '?'}
+                  {admins.map((a, i) => {
+                    const status = a.profile?.user_status || 'active';
+                    return (
+                      <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                            {a.profile?.name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">{a.profile?.name || 'Unknown'}</p>
+                              {status !== 'active' && (
+                                <Badge variant="destructive" className="text-[10px] rounded-full capitalize">{status}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{a.profile?.email}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {a.profile?.admin_level ? `${a.profile.admin_level} admin` : a.role} ·
+                              {a.profile?.county && ` ${a.profile.county}`}
+                              {a.profile?.constituency && ` > ${a.profile.constituency}`}
+                              {a.profile?.ward && ` > ${a.profile.ward}`}
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{a.profile?.name || 'Unknown'}</p>
-                          <p className="text-xs text-muted-foreground">{a.profile?.email}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {a.profile?.admin_level ? `${a.profile.admin_level} admin` : a.role} ·
-                            {a.profile?.county && ` ${a.profile.county}`}
-                            {a.profile?.constituency && ` > ${a.profile.constituency}`}
-                            {a.profile?.ward && ` > ${a.profile.ward}`}
-                          </p>
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="capitalize rounded-full text-xs mr-2">{a.role}</Badge>
+                          {status === 'active' && (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleUserAction(a.user_id, 'suspend')} disabled={actionLoading === a.user_id}>
+                                <UserX className="h-3.5 w-3.5 text-amber-600" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleUserAction(a.user_id, 'ban')} disabled={actionLoading === a.user_id}>
+                                <Ban className="h-3.5 w-3.5 text-red-600" />
+                              </Button>
+                            </>
+                          )}
+                          {(status === 'suspended' || status === 'banned') && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleUserAction(a.user_id, 'activate')} disabled={actionLoading === a.user_id}>
+                              <RotateCcw className="h-3.5 w-3.5 text-emerald-600" />
+                            </Button>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" disabled={actionLoading === a.user_id}>
+                                <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Permanently Delete User?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove {a.profile?.name}'s account and all associated data. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleUserAction(a.user_id, 'delete')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Delete Permanently
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
-                      <Badge variant="outline" className="capitalize rounded-full text-xs">{a.role}</Badge>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ALL USERS TAB */}
+        <TabsContent value="users">
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Users className="h-4 w-4 text-primary" /> All Users (Students)
+              </CardTitle>
+              <CardDescription>Manage all registered users — suspend, ban, or delete.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {allUsers.length === 0 ? (
+                <div className="text-center py-16">
+                  <Users className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No users yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {allUsers.map(u => {
+                    const status = u.user_status || 'active';
+                    // Skip the super admin's own profile
+                    if (u.user_id === user?.id) return null;
+                    return (
+                      <div key={u.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
+                        <div className="flex items-center gap-3">
+                          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
+                            {u.name?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">{u.name}</p>
+                              {status !== 'active' && (
+                                <Badge variant="destructive" className="text-[10px] rounded-full capitalize">{status}</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">{u.email}</p>
+                            <p className="text-xs text-muted-foreground">{u.county}{u.constituency ? ` > ${u.constituency}` : ''}{u.ward ? ` > ${u.ward}` : ''}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {status === 'active' && (
+                            <>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleUserAction(u.user_id, 'suspend')} disabled={actionLoading === u.user_id} title="Suspend">
+                                <UserX className="h-3.5 w-3.5 text-amber-600" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleUserAction(u.user_id, 'ban')} disabled={actionLoading === u.user_id} title="Ban">
+                                <Ban className="h-3.5 w-3.5 text-red-600" />
+                              </Button>
+                            </>
+                          )}
+                          {(status === 'suspended' || status === 'banned') && (
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleUserAction(u.user_id, 'activate')} disabled={actionLoading === u.user_id} title="Reactivate">
+                              <RotateCcw className="h-3.5 w-3.5 text-emerald-600" />
+                            </Button>
+                          )}
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" disabled={actionLoading === u.user_id} title="Delete permanently">
+                                <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Permanently Delete User?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This will permanently remove {u.name}'s account. This cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleUserAction(u.user_id, 'delete')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                  Delete Permanently
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* INVITATIONS TAB with delete/revoke */}
         <TabsContent value="invitations">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Mail className="h-4 w-4 text-primary" /> Invitation History
               </CardTitle>
+              <CardDescription>View, revoke, or delete invitations.</CardDescription>
             </CardHeader>
             <CardContent>
               {invitations.length === 0 ? (
@@ -317,12 +535,36 @@ const SuperAdminDashboard = () => {
                           {new Date(inv.created_at).toLocaleString()}
                         </p>
                       </div>
-                      <Badge variant={inv.status === 'used' ? 'default' : inv.status === 'expired' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs">
-                        {inv.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
-                        {inv.status === 'used' && <CheckCircle className="h-3 w-3 mr-1" />}
-                        {inv.status === 'expired' && <XCircle className="h-3 w-3 mr-1" />}
-                        {inv.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={inv.status === 'used' ? 'default' : inv.status === 'expired' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs">
+                          {inv.status === 'pending' && <Clock className="h-3 w-3 mr-1" />}
+                          {inv.status === 'used' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {inv.status === 'expired' && <XCircle className="h-3 w-3 mr-1" />}
+                          {inv.status}
+                        </Badge>
+                        {inv.status === 'pending' && (
+                          <Button size="sm" variant="ghost" className="h-8 text-amber-600 text-xs" onClick={() => handleRevokeInvitation(inv.id)}>
+                            Revoke
+                          </Button>
+                        )}
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-8 w-8">
+                              <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Invitation?</AlertDialogTitle>
+                              <AlertDialogDescription>Remove this invitation record permanently.</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDeleteInvitation(inv.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -331,6 +573,82 @@ const SuperAdminDashboard = () => {
           </Card>
         </TabsContent>
 
+        {/* LOOKUP TAB */}
+        <TabsContent value="lookup">
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Search className="h-4 w-4 text-primary" /> Student Lookup
+              </CardTitle>
+              <CardDescription>Enter an Education ID or scan a QR code to view student documents.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3 max-w-md mb-6">
+                <Input
+                  value={lookupId}
+                  onChange={e => setLookupId(e.target.value)}
+                  placeholder="Enter Education ID (e.g. EV-M3X7K...)"
+                  className="h-11 rounded-xl"
+                  onKeyDown={e => e.key === 'Enter' && handleLookup()}
+                />
+                <Button onClick={handleLookup} disabled={lookupLoading || !lookupId.trim()} className="h-11 rounded-xl px-6">
+                  {lookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              {lookupResult && (
+                <div className="space-y-6">
+                  {/* Student Info */}
+                  <div className="p-4 rounded-xl bg-secondary/60">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">{lookupResult.student.student_name}</h3>
+                        <p className="text-sm text-muted-foreground">{lookupResult.student.school_name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {lookupResult.profile?.ward}, {lookupResult.profile?.constituency}, {lookupResult.profile?.county}
+                        </p>
+                      </div>
+                      <StatusBadge status={lookupResult.student.status} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="p-2 rounded-lg bg-background">
+                        <span className="text-xs text-muted-foreground">Education ID</span>
+                        <p className="font-medium text-primary">{lookupResult.student.education_id}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-background">
+                        <span className="text-xs text-muted-foreground">Birth Cert</span>
+                        <p className="font-medium">{lookupResult.student.birth_cert_number || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Documents */}
+                  <DocumentList studentId={lookupResult.student.id} />
+
+                  {/* Comments */}
+                  {lookupResult.comments?.length > 0 && (
+                    <Card className="rounded-2xl shadow-sm">
+                      <CardHeader><CardTitle className="text-sm">Comments</CardTitle></CardHeader>
+                      <CardContent className="space-y-2">
+                        {lookupResult.comments.map((c: any) => (
+                          <div key={c.id} className="p-3 rounded-xl bg-secondary/60">
+                            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                              <Badge variant="outline" className="text-[10px] capitalize rounded-full">{c.role}</Badge>
+                              <span>{new Date(c.created_at).toLocaleDateString()}</span>
+                            </div>
+                            <p className="text-sm">{c.comment_text}</p>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* AUDIT TAB */}
         <TabsContent value="audit">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
