@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { getScopeLabel } from '@/lib/profile-utils';
@@ -13,14 +13,17 @@ import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/common/StatusBadge';
 import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle, MapPin, ArrowLeft, MessageSquare, Banknote, Loader2 } from 'lucide-react';
+import {
+  Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle,
+  MapPin, ArrowLeft, MessageSquare, Banknote, Loader2, Plus, Search,
+  Calendar, DollarSign, Eye,
+} from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
-import { useCallback } from 'react';
 
 const bursarySteps = ['verified', 'approved_for_funding', 'allocated', 'disbursed', 'completed'];
 
 const AdminDashboard = () => {
-  const { user, profile, role } = useAuth();
+  const { user, profile, role, session } = useAuth();
   const { toast } = useToast();
   const [students, setStudents] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
@@ -29,6 +32,18 @@ const AdminDashboard = () => {
   const [comment, setComment] = useState('');
   const [allocAmount, setAllocAmount] = useState('');
   const [loading, setLoading] = useState(true);
+
+  // Bursary Programs
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [applications, setApplications] = useState<any[]>([]);
+  const [showCreateProgram, setShowCreateProgram] = useState(false);
+  const [programForm, setProgramForm] = useState({ title: '', description: '', total_amount: '', per_student_amount: '', deadline: '' });
+  const [creatingProgram, setCreatingProgram] = useState(false);
+
+  // Student Lookup
+  const [lookupId, setLookupId] = useState('');
+  const [lookupResult, setLookupResult] = useState<any>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
 
   const scopeLabel = getScopeLabel(profile, role);
 
@@ -44,14 +59,18 @@ const AdminDashboard = () => {
       studentList.forEach((s: any) => { s.studentProfile = profileMap[s.user_id]; });
     }
 
-    const [burRes, fraudRes] = await Promise.all([
+    const [burRes, fraudRes, progRes, appRes] = await Promise.all([
       supabase.from('bursary_records').select('*, student_profiles(student_name, school_name)'),
       supabase.from('fraud_flags').select('*, student_profiles(student_name)'),
+      supabase.from('bursary_programs').select('*').order('created_at', { ascending: false }),
+      supabase.from('bursary_applications').select('*, student_profiles(student_name, school_name), bursary_programs(title)'),
     ]);
 
     setStudents(studentList);
     setBursaryRecords(burRes.data || []);
     setFraudFlags(fraudRes.data || []);
+    setPrograms(progRes.data || []);
+    setApplications(appRes.data || []);
     setLoading(false);
   };
 
@@ -60,6 +79,8 @@ const AdminDashboard = () => {
   const handleRealtimeUpdate = useCallback(() => { fetchData(); }, []);
   useRealtimeTable('documents', handleRealtimeUpdate);
   useRealtimeTable('comments', handleRealtimeUpdate);
+  useRealtimeTable('bursary_programs', handleRealtimeUpdate);
+  useRealtimeTable('bursary_applications', handleRealtimeUpdate);
 
   const handleFinalApproval = async (decision: 'approved' | 'rejected') => {
     if (!selected || !user) return;
@@ -94,6 +115,59 @@ const AdminDashboard = () => {
     await supabase.from('bursary_records').update(updateData).eq('id', recordId);
     toast({ title: 'Bursary status updated' });
     fetchData();
+  };
+
+  const handleCreateProgram = async () => {
+    if (!user || !programForm.title || !programForm.total_amount || !programForm.deadline) {
+      toast({ title: 'Fill all required fields', variant: 'destructive' }); return;
+    }
+    setCreatingProgram(true);
+    const { error } = await supabase.from('bursary_programs').insert({
+      title: programForm.title,
+      description: programForm.description || null,
+      total_amount: Number(programForm.total_amount),
+      per_student_amount: programForm.per_student_amount ? Number(programForm.per_student_amount) : null,
+      deadline: new Date(programForm.deadline).toISOString(),
+      county: profile?.county || null,
+      constituency: profile?.constituency || null,
+      ward: profile?.ward || null,
+      created_by: user.id,
+    });
+    setCreatingProgram(false);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Bursary program created!' });
+      setProgramForm({ title: '', description: '', total_amount: '', per_student_amount: '', deadline: '' });
+      setShowCreateProgram(false);
+      fetchData();
+    }
+  };
+
+  const handleUpdateAppStatus = async (appId: string, status: string) => {
+    await supabase.from('bursary_applications').update({ status, reviewed_at: new Date().toISOString(), reviewed_by: user?.id }).eq('id', appId);
+    toast({ title: `Application ${status}` });
+    fetchData();
+  };
+
+  const handleLookup = async () => {
+    if (!lookupId.trim()) return;
+    setLookupLoading(true);
+    setLookupResult(null);
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lookup-student?education_id=${encodeURIComponent(lookupId.trim())}`;
+    const res = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${session?.access_token}`,
+        'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+    });
+    const result = await res.json();
+    setLookupLoading(false);
+    if (result.error) {
+      toast({ title: 'Not found', description: result.error, variant: 'destructive' });
+    } else {
+      setLookupResult(result);
+    }
   };
 
   if (loading) {
@@ -180,7 +254,6 @@ const AdminDashboard = () => {
 
   return (
     <DashboardLayout title="Admin Dashboard">
-      {/* Scope */}
       {scopeLabel && (
         <div className="flex items-center gap-2 mb-8 px-4 py-3 rounded-2xl bg-primary/5 border border-primary/10">
           <MapPin className="h-4 w-4 text-primary shrink-0" />
@@ -189,7 +262,6 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {[
           { label: 'Total Applications', value: stats.total, icon: Users },
@@ -200,7 +272,7 @@ const AdminDashboard = () => {
           <Card key={s.label} className="rounded-2xl shadow-sm">
             <CardContent className="p-5">
               <div className="flex items-center gap-4">
-                <div className="h-10 w-10 rounded-xl bg-primary/8 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
                   <s.icon className="h-5 w-5 text-primary" />
                 </div>
                 <div>
@@ -213,13 +285,12 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Tabs */}
       <Tabs defaultValue="applications">
-        <TabsList className="mb-6 rounded-xl">
+        <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="applications" className="rounded-lg">Applications</TabsTrigger>
-          <TabsTrigger value="bursary" className="gap-1.5 rounded-lg">
-            <Banknote className="h-3.5 w-3.5" /> Bursary
-          </TabsTrigger>
+          <TabsTrigger value="bursary" className="gap-1.5 rounded-lg"><Banknote className="h-3.5 w-3.5" /> Bursary</TabsTrigger>
+          <TabsTrigger value="programs" className="gap-1.5 rounded-lg"><DollarSign className="h-3.5 w-3.5" /> Programs</TabsTrigger>
+          <TabsTrigger value="lookup" className="gap-1.5 rounded-lg"><Search className="h-3.5 w-3.5" /> Lookup</TabsTrigger>
           <TabsTrigger value="flags" className="gap-1.5 rounded-lg">
             <AlertTriangle className="h-3.5 w-3.5" /> Flags
             {fraudFlags.length > 0 && <Badge variant="destructive" className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">{fraudFlags.length}</Badge>}
@@ -237,13 +308,9 @@ const AdminDashboard = () => {
               ) : (
                 <div className="space-y-2">
                   {students.map(s => (
-                    <div
-                      key={s.id}
-                      className="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/60 transition-colors cursor-pointer group"
-                      onClick={() => setSelected(s)}
-                    >
+                    <div key={s.id} className="flex items-center justify-between p-4 rounded-xl hover:bg-secondary/60 transition-colors cursor-pointer group" onClick={() => setSelected(s)}>
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/8 flex items-center justify-center text-primary font-semibold text-sm">
+                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
                           {s.student_name?.charAt(0)}
                         </div>
                         <div>
@@ -266,9 +333,7 @@ const AdminDashboard = () => {
         <TabsContent value="bursary">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <TrendingUp className="h-4 w-4 text-primary" /> Bursary Lifecycle
-              </CardTitle>
+              <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Bursary Lifecycle</CardTitle>
             </CardHeader>
             <CardContent>
               {bursaryRecords.length === 0 ? (
@@ -290,9 +355,7 @@ const AdminDashboard = () => {
                           </div>
                           <StatusBadge status={b.status} />
                         </div>
-                        {b.allocated_amount && (
-                          <p className="text-sm font-medium">Amount: KES {Number(b.allocated_amount).toLocaleString()}</p>
-                        )}
+                        {b.allocated_amount && <p className="text-sm font-medium">Amount: KES {Number(b.allocated_amount).toLocaleString()}</p>}
                         {nextStatus && (
                           <div className="flex gap-2 items-end pt-2 border-t border-border">
                             {nextStatus === 'allocated' && (
@@ -309,6 +372,165 @@ const AdminDashboard = () => {
                       </div>
                     );
                   })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* BURSARY PROGRAMS TAB */}
+        <TabsContent value="programs">
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <DollarSign className="h-4 w-4 text-primary" /> Bursary Programs
+                </CardTitle>
+                <Button size="sm" className="rounded-xl gap-1.5" onClick={() => setShowCreateProgram(!showCreateProgram)}>
+                  <Plus className="h-3.5 w-3.5" /> Post New Bursary
+                </Button>
+              </div>
+              <CardDescription>Post available bursaries for students to apply.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Create Form */}
+              {showCreateProgram && (
+                <div className="p-4 rounded-xl bg-secondary/60 mb-6 space-y-4">
+                  <h4 className="font-medium text-sm">Create New Bursary Program</h4>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Title *</Label>
+                      <Input value={programForm.title} onChange={e => setProgramForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. County Education Bursary 2026" className="h-9 rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Description</Label>
+                      <Textarea value={programForm.description} onChange={e => setProgramForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description of eligibility and requirements..." rows={2} className="rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Total Fund Amount (KES) *</Label>
+                      <Input type="number" value={programForm.total_amount} onChange={e => setProgramForm(p => ({ ...p, total_amount: e.target.value }))} placeholder="e.g. 5000000" className="h-9 rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Per Student Amount (KES)</Label>
+                      <Input type="number" value={programForm.per_student_amount} onChange={e => setProgramForm(p => ({ ...p, per_student_amount: e.target.value }))} placeholder="e.g. 50000" className="h-9 rounded-xl" />
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label className="text-xs">Application Deadline *</Label>
+                      <Input type="datetime-local" value={programForm.deadline} onChange={e => setProgramForm(p => ({ ...p, deadline: e.target.value }))} className="h-9 rounded-xl" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" className="rounded-xl" onClick={handleCreateProgram} disabled={creatingProgram}>
+                      {creatingProgram ? 'Creating...' : 'Create Program'}
+                    </Button>
+                    <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setShowCreateProgram(false)}>Cancel</Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Programs List */}
+              {programs.length === 0 ? (
+                <div className="text-center py-12">
+                  <DollarSign className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No bursary programs posted yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {programs.map(p => {
+                    const isOpen = p.status === 'open' && new Date(p.deadline) > new Date();
+                    const appCount = applications.filter(a => a.program_id === p.id).length;
+                    return (
+                      <div key={p.id} className="p-4 rounded-xl bg-secondary/60 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-medium text-sm">{p.title}</h4>
+                            {p.description && <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>}
+                          </div>
+                          <Badge variant={isOpen ? 'default' : 'secondary'} className="rounded-full text-xs">
+                            {isOpen ? 'Open' : 'Closed'}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> KES {Number(p.total_amount).toLocaleString()}</span>
+                          {p.per_student_amount && <span>Per student: KES {Number(p.per_student_amount).toLocaleString()}</span>}
+                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Deadline: {new Date(p.deadline).toLocaleDateString()}</span>
+                          <span>{appCount} application(s)</span>
+                        </div>
+
+                        {/* Applications for this program */}
+                        {appCount > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border space-y-2">
+                            <p className="text-xs font-medium">Applications:</p>
+                            {applications.filter(a => a.program_id === p.id).map(app => (
+                              <div key={app.id} className="flex items-center justify-between p-2 rounded-lg bg-background">
+                                <div>
+                                  <p className="text-sm font-medium">{app.student_profiles?.student_name}</p>
+                                  <p className="text-xs text-muted-foreground">{app.student_profiles?.school_name}</p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={app.status === 'approved' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'} className="rounded-full text-xs capitalize">{app.status}</Badge>
+                                  {app.status === 'pending' && (
+                                    <>
+                                      <Button size="sm" variant="ghost" className="h-7 text-xs text-emerald-600" onClick={() => handleUpdateAppStatus(app.id, 'approved')}>Approve</Button>
+                                      <Button size="sm" variant="ghost" className="h-7 text-xs text-red-600" onClick={() => handleUpdateAppStatus(app.id, 'rejected')}>Reject</Button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* STUDENT LOOKUP TAB */}
+        <TabsContent value="lookup">
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Search className="h-4 w-4 text-primary" /> Student Lookup
+              </CardTitle>
+              <CardDescription>Enter an Education ID or scan QR code to view student documents and info.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3 max-w-md mb-6">
+                <Input value={lookupId} onChange={e => setLookupId(e.target.value)} placeholder="Enter Education ID (e.g. EV-M3X7K...)" className="h-11 rounded-xl" onKeyDown={e => e.key === 'Enter' && handleLookup()} />
+                <Button onClick={handleLookup} disabled={lookupLoading || !lookupId.trim()} className="h-11 rounded-xl px-6">
+                  {lookupLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              {lookupResult && (
+                <div className="space-y-6">
+                  <div className="p-4 rounded-xl bg-secondary/60">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <h3 className="font-semibold text-lg">{lookupResult.student.student_name}</h3>
+                        <p className="text-sm text-muted-foreground">{lookupResult.student.school_name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {lookupResult.profile?.ward}, {lookupResult.profile?.constituency}, {lookupResult.profile?.county}
+                        </p>
+                      </div>
+                      <StatusBadge status={lookupResult.student.status} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="p-2 rounded-lg bg-background">
+                        <span className="text-xs text-muted-foreground">Education ID</span>
+                        <p className="font-medium text-primary">{lookupResult.student.education_id}</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-background">
+                        <span className="text-xs text-muted-foreground">Birth Cert</span>
+                        <p className="font-medium">{lookupResult.student.birth_cert_number || '—'}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <DocumentList studentId={lookupResult.student.id} />
                 </div>
               )}
             </CardContent>
