@@ -14,6 +14,7 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     // Verify caller is super_admin
@@ -151,9 +152,7 @@ serve(async (req) => {
     }
 
     // Determine the accept invite URL
-    // Use the Referer header or fallback to construct from SUPABASE_URL
     const referer = req.headers.get('referer') || req.headers.get('origin') || '';
-    // Extract origin from referer
     let siteOrigin = '';
     try {
       if (referer) {
@@ -164,42 +163,36 @@ serve(async (req) => {
 
     const acceptUrl = `${siteOrigin}/accept-invite?token=${inviteToken}`;
 
-    // Send the actual email via Supabase magic link
+    // Send the actual email
     let emailSent = false;
     let emailError = '';
 
     if (existingUser) {
-      // User already exists - generate a magic link
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
+      // Existing user: use the GoTrue /otp endpoint to send a magic link email
+      // signInWithOtp with shouldCreateUser:false sends a magic link to existing users
+      const anonClient = createClient(supabaseUrl, anonKey);
+      const { error: otpError } = await anonClient.auth.signInWithOtp({
         email,
         options: {
-          redirectTo: acceptUrl,
+          emailRedirectTo: acceptUrl,
+          shouldCreateUser: false,
         },
       });
 
-      if (linkError) {
-        emailError = linkError.message;
-        console.error('Magic link generation failed:', linkError);
+      if (otpError) {
+        emailError = otpError.message;
+        console.error('Magic link OTP email failed:', otpError);
       } else {
-        // The generateLink returns properties with the hashed token
-        // We need to construct the email verification URL
-        const actionLink = linkData?.properties?.action_link;
-        if (actionLink) {
-          // Modify the action link to redirect to our accept-invite page
-          // The action link format: {SUPABASE_URL}/auth/v1/verify?token=...&type=magiclink&redirect_to=...
-          emailSent = true;
-        }
+        emailSent = true;
+        console.log('Magic link email sent to existing user:', email);
       }
-    }
-
-    if (!existingUser) {
-      // New user - use inviteUserByEmail which sends an actual email
-      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    } else {
+      // New user: inviteUserByEmail sends an actual invite email
+      const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
         redirectTo: acceptUrl,
         data: {
           name: '',
-          role: 'user', // Default role, will be upgraded on invite acceptance
+          role: 'user',
           invited: true,
         },
       });
@@ -209,6 +202,7 @@ serve(async (req) => {
         console.error('Invite email failed:', inviteError);
       } else {
         emailSent = true;
+        console.log('Invite email sent to new user:', email);
       }
     }
 
