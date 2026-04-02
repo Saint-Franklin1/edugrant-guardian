@@ -47,30 +47,45 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, admin_level, county, constituency, ward } = body;
+    const { email, role: inviteRole, admin_level, county, constituency, ward } = body;
 
     // Validate required fields
-    if (!email || !admin_level || !county) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: email, admin_level, county' }), {
+    if (!email || !inviteRole || !county) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: email, role, county' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Validate admin_level
-    if (!['county', 'constituency', 'ward'].includes(admin_level)) {
+    // Validate role
+    if (!['admin', 'chief'].includes(inviteRole)) {
+      return new Response(JSON.stringify({ error: 'Invalid role. Must be admin or chief.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // For admin role, require admin_level
+    if (inviteRole === 'admin' && !admin_level) {
+      return new Response(JSON.stringify({ error: 'admin_level required for admin role' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate admin_level if provided
+    if (admin_level && !['county', 'constituency', 'ward'].includes(admin_level)) {
       return new Response(JSON.stringify({ error: 'Invalid admin_level' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     // Validate jurisdiction fields based on admin_level
-    if (admin_level === 'constituency' && !constituency) {
+    const effectiveLevel = inviteRole === 'chief' ? 'ward' : admin_level;
+    if (effectiveLevel === 'constituency' && !constituency) {
       return new Response(JSON.stringify({ error: 'Constituency required for constituency admin' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (admin_level === 'ward' && (!constituency || !ward)) {
-      return new Response(JSON.stringify({ error: 'Constituency and ward required for ward admin' }), {
+    if (effectiveLevel === 'ward' && (!constituency || !ward)) {
+      return new Response(JSON.stringify({ error: 'Constituency and ward required for ward-level role' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -89,7 +104,7 @@ serve(async (req) => {
       });
     }
 
-    // Check if user already exists with admin role
+    // Check if user already has an admin/chief role
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
     const existingUser = existingUsers?.users?.find(u => u.email === email);
     if (existingUser) {
@@ -97,27 +112,27 @@ serve(async (req) => {
         .from('user_roles')
         .select('role')
         .eq('user_id', existingUser.id)
-        .in('role', ['admin', 'super_admin'])
+        .in('role', ['admin', 'super_admin', 'chief'])
         .single();
 
       if (existingRole) {
-        return new Response(JSON.stringify({ error: 'This user already has an admin role' }), {
+        return new Response(JSON.stringify({ error: 'This user already has a staff role' }), {
           status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     }
 
-    // Generate token and expiry
+    // Generate token and expiry (1 hour)
     const inviteToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1 hour
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
     // Store invitation
     const { data: invitation, error: insertError } = await supabaseAdmin
       .from('invitations')
       .insert({
         invited_email: email,
-        role: 'admin',
-        admin_level,
+        role: inviteRole,
+        admin_level: inviteRole === 'chief' ? 'ward' : admin_level,
         county,
         constituency: constituency || null,
         ward: ward || null,
@@ -135,14 +150,76 @@ serve(async (req) => {
       });
     }
 
+    // Determine the accept invite URL
+    // Use the Referer header or fallback to construct from SUPABASE_URL
+    const referer = req.headers.get('referer') || req.headers.get('origin') || '';
+    // Extract origin from referer
+    let siteOrigin = '';
+    try {
+      if (referer) {
+        const url = new URL(referer);
+        siteOrigin = url.origin;
+      }
+    } catch { /* ignore */ }
+
+    const acceptUrl = `${siteOrigin}/accept-invite?token=${inviteToken}`;
+
+    // Send the actual email via Supabase magic link
+    let emailSent = false;
+    let emailError = '';
+
+    if (existingUser) {
+      // User already exists - generate a magic link
+      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+        type: 'magiclink',
+        email,
+        options: {
+          redirectTo: acceptUrl,
+        },
+      });
+
+      if (linkError) {
+        emailError = linkError.message;
+        console.error('Magic link generation failed:', linkError);
+      } else {
+        // The generateLink returns properties with the hashed token
+        // We need to construct the email verification URL
+        const actionLink = linkData?.properties?.action_link;
+        if (actionLink) {
+          // Modify the action link to redirect to our accept-invite page
+          // The action link format: {SUPABASE_URL}/auth/v1/verify?token=...&type=magiclink&redirect_to=...
+          emailSent = true;
+        }
+      }
+    }
+
+    if (!existingUser) {
+      // New user - use inviteUserByEmail which sends an actual email
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+        redirectTo: acceptUrl,
+        data: {
+          name: '',
+          role: 'user', // Default role, will be upgraded on invite acceptance
+          invited: true,
+        },
+      });
+
+      if (inviteError) {
+        emailError = inviteError.message;
+        console.error('Invite email failed:', inviteError);
+      } else {
+        emailSent = true;
+      }
+    }
+
     // Log audit
     await supabaseAdmin.from('audit_logs').insert({
       actor_id: user.id,
       actor_role: 'super_admin',
-      action: 'invite_admin',
+      action: `invite_${inviteRole}`,
       target_type: 'invitation',
       target_id: invitation.id,
-      metadata: { email, admin_level, county, constituency, ward },
+      metadata: { email, role: inviteRole, admin_level: inviteRole === 'chief' ? 'ward' : admin_level, county, constituency, ward, email_sent: emailSent },
     });
 
     return new Response(JSON.stringify({
@@ -150,11 +227,15 @@ serve(async (req) => {
       invitation_id: invitation.id,
       token: inviteToken,
       expires_at: expiresAt,
+      email_sent: emailSent,
+      email_error: emailError || undefined,
+      accept_url: acceptUrl,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
+    console.error('send-admin-invite error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
