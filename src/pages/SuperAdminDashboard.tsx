@@ -109,6 +109,9 @@ const SuperAdminDashboard = () => {
   const handleRealtimeUpdate = useCallback(() => { fetchData(); }, []);
   useRealtimeTable('documents', handleRealtimeUpdate);
   useRealtimeTable('comments', handleRealtimeUpdate);
+  useRealtimeTable('invitations', handleRealtimeUpdate);
+  useRealtimeTable('user_roles', handleRealtimeUpdate);
+  useRealtimeTable('profiles', handleRealtimeUpdate);
 
   const getSelectedNames = () => {
     const county = counties.find(c => c.id === selectedCountyId)?.name || '';
