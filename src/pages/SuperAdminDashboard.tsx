@@ -39,6 +39,7 @@ const SuperAdminDashboard = () => {
   const { toast } = useToast();
 
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'chief'>('admin');
   const [inviteLevel, setInviteLevel] = useState('');
   const [selectedCountyId, setSelectedCountyId] = useState('');
   const [selectedConstituencyId, setSelectedConstituencyId] = useState('');
