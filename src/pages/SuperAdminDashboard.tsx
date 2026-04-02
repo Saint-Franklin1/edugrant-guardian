@@ -118,30 +118,40 @@ const SuperAdminDashboard = () => {
   };
 
   const handleSendInvite = async () => {
-    if (!inviteEmail || !inviteLevel || !selectedCountyId) {
-      toast({ title: 'Missing fields', description: 'Fill in email, admin level, and county.', variant: 'destructive' }); return;
+    if (!inviteEmail || !selectedCountyId) {
+      toast({ title: 'Missing fields', description: 'Fill in email and county.', variant: 'destructive' }); return;
     }
-    if (inviteLevel === 'constituency' && !selectedConstituencyId) {
+    if (inviteRole === 'admin' && !inviteLevel) {
+      toast({ title: 'Select admin level', variant: 'destructive' }); return;
+    }
+    if (inviteRole === 'chief' && (!selectedConstituencyId || !selectedWardId)) {
+      toast({ title: 'Chiefs require constituency and ward', variant: 'destructive' }); return;
+    }
+    const effectiveLevel = inviteRole === 'chief' ? 'ward' : inviteLevel;
+    if (effectiveLevel === 'constituency' && !selectedConstituencyId) {
       toast({ title: 'Missing constituency', variant: 'destructive' }); return;
     }
-    if (inviteLevel === 'ward' && (!selectedConstituencyId || !selectedWardId)) {
+    if (effectiveLevel === 'ward' && (!selectedConstituencyId || !selectedWardId)) {
       toast({ title: 'Missing constituency/ward', variant: 'destructive' }); return;
     }
 
     const { county, constituency, ward } = getSelectedNames();
     setSending(true);
     const { data, error } = await supabase.functions.invoke('send-admin-invite', {
-      body: { email: inviteEmail, admin_level: inviteLevel, county, constituency, ward },
+      body: { email: inviteEmail, role: inviteRole, admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, county, constituency, ward },
     });
     setSending(false);
 
     if (error || data?.error) {
       toast({ title: 'Failed to send invite', description: data?.error || error?.message, variant: 'destructive' });
     } else {
-      const inviteLink = `${window.location.origin}/accept-invite?token=${data.token}`;
-      toast({ title: 'Invitation created!', description: 'The invite link has been copied to your clipboard.' });
+      const emailInfo = data.email_sent
+        ? 'An invitation email has been sent to the invitee!'
+        : `Email delivery issue: ${data.email_error || 'unknown'}. Invite link copied to clipboard as backup.`;
+      toast({ title: data.email_sent ? '✅ Invitation Sent!' : '⚠️ Invitation Created', description: emailInfo });
+      const inviteLink = data.accept_url || `${window.location.origin}/accept-invite?token=${data.token}`;
       navigator.clipboard?.writeText(inviteLink);
-      setInviteEmail(''); setInviteLevel(''); setSelectedCountyId('');
+      setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
   };
