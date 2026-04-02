@@ -39,6 +39,7 @@ const SuperAdminDashboard = () => {
   const { toast } = useToast();
 
   const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'admin' | 'chief'>('admin');
   const [inviteLevel, setInviteLevel] = useState('');
   const [selectedCountyId, setSelectedCountyId] = useState('');
   const [selectedConstituencyId, setSelectedConstituencyId] = useState('');
@@ -117,30 +118,40 @@ const SuperAdminDashboard = () => {
   };
 
   const handleSendInvite = async () => {
-    if (!inviteEmail || !inviteLevel || !selectedCountyId) {
-      toast({ title: 'Missing fields', description: 'Fill in email, admin level, and county.', variant: 'destructive' }); return;
+    if (!inviteEmail || !selectedCountyId) {
+      toast({ title: 'Missing fields', description: 'Fill in email and county.', variant: 'destructive' }); return;
     }
-    if (inviteLevel === 'constituency' && !selectedConstituencyId) {
+    if (inviteRole === 'admin' && !inviteLevel) {
+      toast({ title: 'Select admin level', variant: 'destructive' }); return;
+    }
+    if (inviteRole === 'chief' && (!selectedConstituencyId || !selectedWardId)) {
+      toast({ title: 'Chiefs require constituency and ward', variant: 'destructive' }); return;
+    }
+    const effectiveLevel = inviteRole === 'chief' ? 'ward' : inviteLevel;
+    if (effectiveLevel === 'constituency' && !selectedConstituencyId) {
       toast({ title: 'Missing constituency', variant: 'destructive' }); return;
     }
-    if (inviteLevel === 'ward' && (!selectedConstituencyId || !selectedWardId)) {
+    if (effectiveLevel === 'ward' && (!selectedConstituencyId || !selectedWardId)) {
       toast({ title: 'Missing constituency/ward', variant: 'destructive' }); return;
     }
 
     const { county, constituency, ward } = getSelectedNames();
     setSending(true);
     const { data, error } = await supabase.functions.invoke('send-admin-invite', {
-      body: { email: inviteEmail, admin_level: inviteLevel, county, constituency, ward },
+      body: { email: inviteEmail, role: inviteRole, admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, county, constituency, ward },
     });
     setSending(false);
 
     if (error || data?.error) {
       toast({ title: 'Failed to send invite', description: data?.error || error?.message, variant: 'destructive' });
     } else {
-      const inviteLink = `${window.location.origin}/accept-invite?token=${data.token}`;
-      toast({ title: 'Invitation created!', description: 'The invite link has been copied to your clipboard.' });
+      const emailInfo = data.email_sent
+        ? 'An invitation email has been sent to the invitee!'
+        : `Email delivery issue: ${data.email_error || 'unknown'}. Invite link copied to clipboard as backup.`;
+      toast({ title: data.email_sent ? '✅ Invitation Sent!' : '⚠️ Invitation Created', description: emailInfo });
+      const inviteLink = data.accept_url || `${window.location.origin}/accept-invite?token=${data.token}`;
       navigator.clipboard?.writeText(inviteLink);
-      setInviteEmail(''); setInviteLevel(''); setSelectedCountyId('');
+      setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
   };
@@ -272,28 +283,41 @@ const SuperAdminDashboard = () => {
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserPlus className="h-4 w-4 text-primary" /> Invite New Admin
+                <UserPlus className="h-4 w-4 text-primary" /> Invite Staff Member
               </CardTitle>
-              <CardDescription>Send a secure, time-bound invitation to onboard a new administrator.</CardDescription>
+              <CardDescription>Send a secure invitation email with a magic link. The invitee will receive it in their inbox.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 max-w-md">
               <div className="space-y-1.5">
                 <Label className="text-sm">Email Address</Label>
-                <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="admin@example.com" type="email" className="h-11 rounded-xl" />
+                <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="staff@example.com" type="email" className="h-11 rounded-xl" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Admin Level</Label>
-                <Select value={inviteLevel} onValueChange={v => { setInviteLevel(v); setSelectedCountyId(''); }}>
-                  <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select admin level" /></SelectTrigger>
+                <Label className="text-sm">Role</Label>
+                <Select value={inviteRole} onValueChange={v => { setInviteRole(v as 'admin' | 'chief'); setInviteLevel(''); setSelectedCountyId(''); }}>
+                  <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select role" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="county"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> County Admin</div></SelectItem>
-                    <SelectItem value="constituency"><div className="flex items-center gap-2"><Building className="h-4 w-4" /> Constituency Admin</div></SelectItem>
-                    <SelectItem value="ward"><div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Ward Admin / Chief</div></SelectItem>
+                    <SelectItem value="admin"><div className="flex items-center gap-2"><Shield className="h-4 w-4" /> Administrator</div></SelectItem>
+                    <SelectItem value="chief"><div className="flex items-center gap-2"><Crown className="h-4 w-4" /> Chief</div></SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              {inviteLevel && (
+              {inviteRole === 'admin' && (
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Admin Level</Label>
+                  <Select value={inviteLevel} onValueChange={v => { setInviteLevel(v); setSelectedCountyId(''); }}>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select admin level" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="county"><div className="flex items-center gap-2"><Globe className="h-4 w-4" /> County Admin</div></SelectItem>
+                      <SelectItem value="constituency"><div className="flex items-center gap-2"><Building className="h-4 w-4" /> Constituency Admin</div></SelectItem>
+                      <SelectItem value="ward"><div className="flex items-center gap-2"><MapPin className="h-4 w-4" /> Ward Admin</div></SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {(inviteRole === 'chief' || (inviteRole === 'admin' && inviteLevel)) && (
                 <div className="space-y-1.5">
                   <Label className="text-sm">County</Label>
                   <Select value={selectedCountyId} onValueChange={setSelectedCountyId}>
@@ -303,7 +327,7 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-              {showConstituency && (
+              {(inviteRole === 'chief' || showConstituency) && (
                 <div className="space-y-1.5">
                   <Label className="text-sm">Constituency</Label>
                   <Select value={selectedConstituencyId} onValueChange={setSelectedConstituencyId} disabled={!selectedCountyId}>
@@ -313,7 +337,7 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-              {showWard && (
+              {(inviteRole === 'chief' || showWard) && (
                 <div className="space-y-1.5">
                   <Label className="text-sm">Ward</Label>
                   <Select value={selectedWardId} onValueChange={setSelectedWardId} disabled={!selectedConstituencyId}>
@@ -324,9 +348,9 @@ const SuperAdminDashboard = () => {
               )}
 
               <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
-                {sending ? 'Sending...' : 'Send Invitation'}
+                {sending ? 'Sending Invitation...' : `Send ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
               </Button>
-              <p className="text-xs text-muted-foreground">Invitation link expires in 1 hour and can only be used once.</p>
+              <p className="text-xs text-muted-foreground">📧 A magic link email will be sent to the invitee. The link expires in 1 hour.</p>
             </CardContent>
           </Card>
         </TabsContent>

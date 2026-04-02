@@ -63,7 +63,6 @@ serve(async (req) => {
 
     // Check expiry
     if (new Date(invitation.expires_at) < new Date()) {
-      // Mark as expired
       await supabaseAdmin.from('invitations').update({ status: 'expired' }).eq('id', invitation.id);
       return new Response(JSON.stringify({ error: 'This invitation has expired' }), {
         status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -77,12 +76,19 @@ serve(async (req) => {
       });
     }
 
-    // Assign admin role
+    // Determine the role to assign (admin or chief)
+    const assignedRole = invitation.role || 'admin';
+
+    // Assign role
     const { error: roleError } = await supabaseAdmin
       .from('user_roles')
-      .insert({ user_id: user.id, role: 'admin' });
+      .upsert(
+        { user_id: user.id, role: assignedRole },
+        { onConflict: 'user_id,role' }
+      );
 
-    if (roleError && !roleError.message.includes('duplicate')) {
+    if (roleError) {
+      console.error('Role assignment error:', roleError);
       return new Response(JSON.stringify({ error: 'Failed to assign role: ' + roleError.message }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -119,15 +125,16 @@ serve(async (req) => {
     // Log audit
     await supabaseAdmin.from('audit_logs').insert({
       actor_id: user.id,
-      actor_role: 'admin',
+      actor_role: assignedRole,
       action: 'accepted_invite',
       target_type: 'user',
       target_id: user.id,
-      metadata: { invitation_id: invitation.id, admin_level: invitation.admin_level },
+      metadata: { invitation_id: invitation.id, role: assignedRole, admin_level: invitation.admin_level },
     });
 
     return new Response(JSON.stringify({
       success: true,
+      role: assignedRole,
       admin_level: invitation.admin_level,
       county: invitation.county,
       constituency: invitation.constituency,
@@ -137,6 +144,7 @@ serve(async (req) => {
     });
 
   } catch (error) {
+    console.error('accept-invite error:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
