@@ -91,19 +91,12 @@ serve(async (req) => {
       });
     }
 
-    // Check for existing pending invitation
-    const { data: existingInvite } = await supabaseAdmin
+    // Delete any existing pending invitation for this email (allows re-invite)
+    await supabaseAdmin
       .from('invitations')
-      .select('id')
+      .delete()
       .eq('invited_email', email)
-      .eq('status', 'pending')
-      .single();
-
-    if (existingInvite) {
-      return new Response(JSON.stringify({ error: 'A pending invitation already exists for this email' }), {
-        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+      .eq('status', 'pending');
 
     // Check if user already has an admin/chief role
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
