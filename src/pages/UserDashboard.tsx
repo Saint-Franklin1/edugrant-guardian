@@ -81,6 +81,8 @@ const UserDashboard = () => {
   useRealtimeTable('comments', handleRealtimeUpdate);
   useRealtimeTable('bursary_programs', handleRealtimeUpdate);
   useRealtimeTable('bursary_applications', handleRealtimeUpdate);
+  useRealtimeTable('disbursements', handleRealtimeUpdate);
+  useRealtimeTable('school_payment_details', handleRealtimeUpdate);
 
   const missingRequired = requiredDocumentTypes.filter(t => !uploadedTypes.includes(t));
   const allRequiredUploaded = missingRequired.length === 0;
