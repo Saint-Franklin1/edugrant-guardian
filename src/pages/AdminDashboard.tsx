@@ -36,9 +36,6 @@ const AdminDashboard = () => {
   // Bursary Programs
   const [programs, setPrograms] = useState<any[]>([]);
   const [applications, setApplications] = useState<any[]>([]);
-  const [showCreateProgram, setShowCreateProgram] = useState(false);
-  const [programForm, setProgramForm] = useState({ title: '', description: '', total_amount: '', per_student_amount: '', deadline: '' });
-  const [creatingProgram, setCreatingProgram] = useState(false);
 
   // Student Lookup
   const [lookupId, setLookupId] = useState('');
@@ -115,33 +112,6 @@ const AdminDashboard = () => {
     await supabase.from('bursary_records').update(updateData).eq('id', recordId);
     toast({ title: 'Bursary status updated' });
     fetchData();
-  };
-
-  const handleCreateProgram = async () => {
-    if (!user || !programForm.title || !programForm.total_amount || !programForm.deadline) {
-      toast({ title: 'Fill all required fields', variant: 'destructive' }); return;
-    }
-    setCreatingProgram(true);
-    const { error } = await supabase.from('bursary_programs').insert({
-      title: programForm.title,
-      description: programForm.description || null,
-      total_amount: Number(programForm.total_amount),
-      per_student_amount: programForm.per_student_amount ? Number(programForm.per_student_amount) : null,
-      deadline: new Date(programForm.deadline).toISOString(),
-      county: profile?.county || null,
-      constituency: profile?.constituency || null,
-      ward: profile?.ward || null,
-      created_by: user.id,
-    });
-    setCreatingProgram(false);
-    if (error) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Bursary program created!' });
-      setProgramForm({ title: '', description: '', total_amount: '', per_student_amount: '', deadline: '' });
-      setShowCreateProgram(false);
-      fetchData();
-    }
   };
 
   const handleUpdateAppStatus = async (appId: string, status: string) => {
