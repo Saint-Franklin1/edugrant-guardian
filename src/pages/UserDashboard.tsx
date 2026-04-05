@@ -17,9 +17,10 @@ import { requiredDocumentTypes, documentTypes } from '@/lib/kenya-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertTriangle, CheckCircle, FileText, Upload, User, School, Hash,
-  GraduationCap, Loader2, Banknote, Calendar, DollarSign, Send,
+  GraduationCap, Loader2, Banknote, Calendar, DollarSign, Send, MapPin, Building2,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
+import SchoolPaymentForm from '@/components/user/SchoolPaymentForm';
 import type { Database } from '@/integrations/supabase/types';
 
 type StudentProfile = Database['public']['Tables']['student_profiles']['Row'];
