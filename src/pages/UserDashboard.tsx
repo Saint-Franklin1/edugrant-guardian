@@ -65,6 +65,12 @@ const UserDashboard = () => {
     const { data: appData } = await supabase.from('bursary_applications').select('*, bursary_programs(title, deadline, per_student_amount)').eq('user_id', user.id);
     setMyApplications(appData || []);
 
+    // Fetch my disbursements
+    if (data) {
+      const { data: disbData } = await supabase.from('disbursements').select('*, bursary_programs(title)').eq('student_id', data.id);
+      setMyDisbursements(disbData || []);
+    }
+
     setLoading(false);
   };
 
