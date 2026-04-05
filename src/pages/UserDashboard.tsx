@@ -314,6 +314,33 @@ const UserDashboard = () => {
         {/* BURSARIES TAB */}
         <TabsContent value="bursaries">
           <div className="space-y-6">
+            {/* School Payment Details */}
+            <SchoolPaymentForm studentId={student.id} />
+
+            {/* Disbursements */}
+            {myDisbursements.length > 0 && (
+              <Card className="rounded-2xl shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Building2 className="h-4 w-4 text-primary" /> Fund Disbursements
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {myDisbursements.map(d => (
+                    <div key={d.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-xl bg-secondary/60">
+                      <div>
+                        <p className="font-medium text-sm">{d.bursary_programs?.title || 'Bursary'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          KES {Number(d.amount).toLocaleString()} · {new Date(d.disbursed_at || d.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge variant="default" className="capitalize rounded-full text-xs self-start">{d.status}</Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
             {/* My Applications */}
             {myApplications.length > 0 && (
               <Card className="rounded-2xl shadow-sm">
@@ -324,7 +351,7 @@ const UserDashboard = () => {
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {myApplications.map(app => (
-                    <div key={app.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
+                    <div key={app.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-4 rounded-xl bg-secondary/60">
                       <div>
                         <p className="font-medium text-sm">{app.bursary_programs?.title}</p>
                         <p className="text-xs text-muted-foreground">
@@ -332,7 +359,7 @@ const UserDashboard = () => {
                           {app.bursary_programs?.per_student_amount && ` · KES ${Number(app.bursary_programs.per_student_amount).toLocaleString()}`}
                         </p>
                       </div>
-                      <Badge variant={app.status === 'approved' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs">
+                      <Badge variant={app.status === 'approved' || app.status === 'disbursed' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs self-start">
                         {app.status}
                       </Badge>
                     </div>
@@ -360,20 +387,24 @@ const UserDashboard = () => {
                     {openPrograms.map(p => {
                       const alreadyApplied = appliedProgramIds.includes(p.id);
                       const canApply = student.status === 'verified' && !alreadyApplied;
+                      const level = p.funding_level;
                       return (
                         <div key={p.id} className="p-4 rounded-xl bg-secondary/60 space-y-3">
-                          <div className="flex items-start justify-between">
-                            <div>
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                            <div className="min-w-0">
                               <h4 className="font-medium text-sm">{p.title}</h4>
                               {p.description && <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>}
                             </div>
-                            <Badge className="rounded-full text-xs">Open</Badge>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {level && <Badge variant="outline" className="rounded-full text-xs capitalize"><MapPin className="h-3 w-3 mr-1" />{level === 'well_wisher' ? 'Well-Wisher' : level}</Badge>}
+                              <Badge className="rounded-full text-xs">Open</Badge>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> Total: KES {Number(p.total_amount).toLocaleString()}</span>
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> KES {Number(p.total_amount).toLocaleString()}</span>
                             {p.per_student_amount && <span>Per student: KES {Number(p.per_student_amount).toLocaleString()}</span>}
-                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Deadline: {new Date(p.deadline).toLocaleDateString()}</span>
-                            {p.county && <span>Region: {p.county}{p.constituency ? ` > ${p.constituency}` : ''}</span>}
+                            <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(p.deadline).toLocaleDateString()}</span>
+                            {p.county && <span>{p.county}{p.constituency ? ` > ${p.constituency}` : ''}</span>}
                           </div>
                           <div>
                             {alreadyApplied ? (
