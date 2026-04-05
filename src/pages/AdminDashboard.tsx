@@ -78,6 +78,8 @@ const AdminDashboard = () => {
   useRealtimeTable('comments', handleRealtimeUpdate);
   useRealtimeTable('bursary_programs', handleRealtimeUpdate);
   useRealtimeTable('bursary_applications', handleRealtimeUpdate);
+  useRealtimeTable('disbursements', handleRealtimeUpdate);
+  useRealtimeTable('school_payment_details', handleRealtimeUpdate);
 
   const handleFinalApproval = async (decision: 'approved' | 'rejected') => {
     if (!selected || !user) return;
