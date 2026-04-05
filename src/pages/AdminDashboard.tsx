@@ -257,9 +257,9 @@ const AdminDashboard = () => {
 
       <Tabs defaultValue="applications">
         <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
-          <TabsTrigger value="applications" className="rounded-lg">Applications</TabsTrigger>
-          <TabsTrigger value="bursary" className="gap-1.5 rounded-lg"><Banknote className="h-3.5 w-3.5" /> Bursary</TabsTrigger>
-          <TabsTrigger value="programs" className="gap-1.5 rounded-lg"><DollarSign className="h-3.5 w-3.5" /> Programs</TabsTrigger>
+          <TabsTrigger value="applications" className="rounded-lg text-xs sm:text-sm">Applications</TabsTrigger>
+          <TabsTrigger value="bursary" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Banknote className="h-3.5 w-3.5" /> Bursary</TabsTrigger>
+          <TabsTrigger value="programs" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Banknote className="h-3.5 w-3.5" /> Programs</TabsTrigger>
           <TabsTrigger value="lookup" className="gap-1.5 rounded-lg"><Search className="h-3.5 w-3.5" /> Lookup</TabsTrigger>
           <TabsTrigger value="flags" className="gap-1.5 rounded-lg">
             <AlertTriangle className="h-3.5 w-3.5" /> Flags
@@ -350,113 +350,7 @@ const AdminDashboard = () => {
 
         {/* BURSARY PROGRAMS TAB */}
         <TabsContent value="programs">
-          <Card className="rounded-2xl shadow-sm">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <DollarSign className="h-4 w-4 text-primary" /> Bursary Programs
-                </CardTitle>
-                <Button size="sm" className="rounded-xl gap-1.5" onClick={() => setShowCreateProgram(!showCreateProgram)}>
-                  <Plus className="h-3.5 w-3.5" /> Post New Bursary
-                </Button>
-              </div>
-              <CardDescription>Post available bursaries for students to apply.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Create Form */}
-              {showCreateProgram && (
-                <div className="p-4 rounded-xl bg-secondary/60 mb-6 space-y-4">
-                  <h4 className="font-medium text-sm">Create New Bursary Program</h4>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs">Title *</Label>
-                      <Input value={programForm.title} onChange={e => setProgramForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. County Education Bursary 2026" className="h-9 rounded-xl" />
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs">Description</Label>
-                      <Textarea value={programForm.description} onChange={e => setProgramForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description of eligibility and requirements..." rows={2} className="rounded-xl" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Total Fund Amount (KES) *</Label>
-                      <Input type="number" value={programForm.total_amount} onChange={e => setProgramForm(p => ({ ...p, total_amount: e.target.value }))} placeholder="e.g. 5000000" className="h-9 rounded-xl" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs">Per Student Amount (KES)</Label>
-                      <Input type="number" value={programForm.per_student_amount} onChange={e => setProgramForm(p => ({ ...p, per_student_amount: e.target.value }))} placeholder="e.g. 50000" className="h-9 rounded-xl" />
-                    </div>
-                    <div className="space-y-1.5 sm:col-span-2">
-                      <Label className="text-xs">Application Deadline *</Label>
-                      <Input type="datetime-local" value={programForm.deadline} onChange={e => setProgramForm(p => ({ ...p, deadline: e.target.value }))} className="h-9 rounded-xl" />
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" className="rounded-xl" onClick={handleCreateProgram} disabled={creatingProgram}>
-                      {creatingProgram ? 'Creating...' : 'Create Program'}
-                    </Button>
-                    <Button size="sm" variant="ghost" className="rounded-xl" onClick={() => setShowCreateProgram(false)}>Cancel</Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Programs List */}
-              {programs.length === 0 ? (
-                <div className="text-center py-12">
-                  <DollarSign className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-sm text-muted-foreground">No bursary programs posted yet.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {programs.map(p => {
-                    const isOpen = p.status === 'open' && new Date(p.deadline) > new Date();
-                    const appCount = applications.filter(a => a.program_id === p.id).length;
-                    return (
-                      <div key={p.id} className="p-4 rounded-xl bg-secondary/60 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-medium text-sm">{p.title}</h4>
-                            {p.description && <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>}
-                          </div>
-                          <Badge variant={isOpen ? 'default' : 'secondary'} className="rounded-full text-xs">
-                            {isOpen ? 'Open' : 'Closed'}
-                          </Badge>
-                        </div>
-                        <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><DollarSign className="h-3 w-3" /> KES {Number(p.total_amount).toLocaleString()}</span>
-                          {p.per_student_amount && <span>Per student: KES {Number(p.per_student_amount).toLocaleString()}</span>}
-                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> Deadline: {new Date(p.deadline).toLocaleDateString()}</span>
-                          <span>{appCount} application(s)</span>
-                        </div>
-
-                        {/* Applications for this program */}
-                        {appCount > 0 && (
-                          <div className="mt-3 pt-3 border-t border-border space-y-2">
-                            <p className="text-xs font-medium">Applications:</p>
-                            {applications.filter(a => a.program_id === p.id).map(app => (
-                              <div key={app.id} className="flex items-center justify-between p-2 rounded-lg bg-background">
-                                <div>
-                                  <p className="text-sm font-medium">{app.student_profiles?.student_name}</p>
-                                  <p className="text-xs text-muted-foreground">{app.student_profiles?.school_name}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge variant={app.status === 'approved' ? 'default' : app.status === 'rejected' ? 'destructive' : 'secondary'} className="rounded-full text-xs capitalize">{app.status}</Badge>
-                                  {app.status === 'pending' && (
-                                    <>
-                                      <Button size="sm" variant="ghost" className="h-7 text-xs text-emerald-600" onClick={() => handleUpdateAppStatus(app.id, 'approved')}>Approve</Button>
-                                      <Button size="sm" variant="ghost" className="h-7 text-xs text-red-600" onClick={() => handleUpdateAppStatus(app.id, 'rejected')}>Reject</Button>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <BursaryProgramManager programs={programs} applications={applications} onRefresh={fetchData} />
         </TabsContent>
 
         {/* STUDENT LOOKUP TAB */}
