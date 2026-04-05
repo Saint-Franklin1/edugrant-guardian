@@ -41,6 +41,7 @@ const UserDashboard = () => {
   // Bursary programs
   const [programs, setPrograms] = useState<any[]>([]);
   const [myApplications, setMyApplications] = useState<any[]>([]);
+  const [myDisbursements, setMyDisbursements] = useState<any[]>([]);
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
 
   const fetchData = async () => {
