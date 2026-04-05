@@ -106,6 +106,7 @@ export type Database = {
           created_by: string
           deadline: string
           description: string | null
+          funding_level: string | null
           id: string
           per_student_amount: number | null
           status: string
@@ -121,6 +122,7 @@ export type Database = {
           created_by: string
           deadline: string
           description?: string | null
+          funding_level?: string | null
           id?: string
           per_student_amount?: number | null
           status?: string
@@ -136,6 +138,7 @@ export type Database = {
           created_by?: string
           deadline?: string
           description?: string | null
+          funding_level?: string | null
           id?: string
           per_student_amount?: number | null
           status?: string
@@ -256,6 +259,77 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      disbursements: {
+        Row: {
+          amount: number
+          application_id: string
+          created_at: string
+          disbursed_at: string | null
+          disbursed_by: string | null
+          id: string
+          notes: string | null
+          program_id: string
+          school_payment_id: string | null
+          status: string
+          student_id: string
+        }
+        Insert: {
+          amount: number
+          application_id: string
+          created_at?: string
+          disbursed_at?: string | null
+          disbursed_by?: string | null
+          id?: string
+          notes?: string | null
+          program_id: string
+          school_payment_id?: string | null
+          status?: string
+          student_id: string
+        }
+        Update: {
+          amount?: number
+          application_id?: string
+          created_at?: string
+          disbursed_at?: string | null
+          disbursed_by?: string | null
+          id?: string
+          notes?: string | null
+          program_id?: string
+          school_payment_id?: string | null
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disbursements_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "bursary_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disbursements_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "bursary_programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disbursements_school_payment_id_fkey"
+            columns: ["school_payment_id"]
+            isOneToOne: false
+            referencedRelation: "school_payment_details"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "disbursements_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       documents: {
         Row: {
@@ -431,6 +505,62 @@ export type Database = {
           ward?: string
         }
         Relationships: []
+      }
+      school_payment_details: {
+        Row: {
+          account_name: string
+          account_number: string
+          admission_number: string
+          bank_name: string
+          branch: string | null
+          id: string
+          school_name: string
+          status: string
+          student_id: string
+          submitted_at: string
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          admission_number: string
+          bank_name: string
+          branch?: string | null
+          id?: string
+          school_name: string
+          status?: string
+          student_id: string
+          submitted_at?: string
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          admission_number?: string
+          bank_name?: string
+          branch?: string | null
+          id?: string
+          school_name?: string
+          status?: string
+          student_id?: string
+          submitted_at?: string
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_payment_details_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_profiles: {
         Row: {
