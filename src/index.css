@@ -129,12 +129,12 @@
   }
 
   .status-draft { @apply bg-muted text-muted-foreground; }
-  .status-submitted { @apply bg-blue-50 text-blue-700; }
-  .status-under_review { @apply bg-amber-50 text-amber-700; }
-  .status-verified { @apply bg-emerald-50 text-emerald-700; }
-  .status-rejected { @apply bg-red-50 text-red-700; }
-  .status-approved_for_funding { @apply bg-indigo-50 text-indigo-700; }
-  .status-allocated { @apply bg-purple-50 text-purple-700; }
-  .status-disbursed { @apply bg-teal-50 text-teal-700; }
-  .status-completed { @apply bg-green-50 text-green-700; }
+  .status-submitted { @apply bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300; }
+  .status-under_review { @apply bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300; }
+  .status-verified { @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300; }
+  .status-rejected { @apply bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300; }
+  .status-approved_for_funding { @apply bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300; }
+  .status-allocated { @apply bg-purple-50 text-purple-700 dark:bg-purple-950 dark:text-purple-300; }
+  .status-disbursed { @apply bg-teal-50 text-teal-700 dark:bg-teal-950 dark:text-teal-300; }
+  .status-completed { @apply bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300; }
 }
