@@ -419,13 +419,13 @@ const AdminDashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {fraudFlags.map(f => (
-                    <div key={f.id} className="p-4 rounded-xl bg-red-50 border border-red-200">
+                    <div key={f.id} className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
                       <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                        <AlertTriangle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
                         <div>
-                          <p className="font-medium text-sm text-red-800">{f.flag_type}</p>
-                          <p className="text-xs text-red-600 mt-0.5">{f.details}</p>
-                          <p className="text-xs text-red-500 mt-2">Student: {f.student_profiles?.student_name}</p>
+                          <p className="font-medium text-sm text-destructive">{f.flag_type}</p>
+                          <p className="text-xs text-destructive/70 mt-0.5">{f.details}</p>
+                          <p className="text-xs text-destructive/60 mt-2">Student: {f.student_profiles?.student_name}</p>
                         </div>
                       </div>
                     </div>
