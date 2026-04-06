@@ -1,31 +1,53 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Upload, QrCode, ShieldCheck, FileCheck, Search, Lock, Eye,
   GraduationCap, UserCog, Users, ArrowRight, CheckCircle2, ClipboardCheck,
-  Mail, Phone, Linkedin, Globe, Github
+  Mail, Phone, Linkedin, Globe, Github, Moon, Sun, Menu, X
 } from 'lucide-react';
+import { useTheme } from '@/hooks/use-theme';
 import logo from '@/assets/elimu-vault-logo.png';
 
 const LandingPage = () => {
+  const { theme, toggleTheme } = useTheme();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
-      <nav className="py-6">
-        <div className="container flex flex-col items-center gap-4">
+      <nav className="py-4 border-b bg-card sticky top-0 z-50">
+        <div className="container flex items-center justify-between px-4">
           <div className="flex items-center gap-2.5">
-            <img src={logo} alt="Elimu Vault" className="h-12 w-12 rounded-lg object-contain" />
-            <span className="text-xl font-bold tracking-tight">Elimu Vault</span>
+            <img src={logo} alt="Elimu Vault" className="h-10 w-10 rounded-lg object-contain" />
+            <span className="text-lg font-bold tracking-tight">Elimu Vault</span>
           </div>
-          <div className="flex items-center gap-8 text-sm font-medium text-muted-foreground">
+          <div className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
             <a href="#" className="hover:text-foreground transition-colors">Home</a>
             <a href="#about" className="hover:text-foreground transition-colors">About Us</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">Bursaries</a>
             <a href="#how-it-works" className="hover:text-foreground transition-colors">How It Works</a>
             <a href="#contact" className="hover:text-foreground transition-colors">Contact</a>
           </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8 text-muted-foreground">
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="icon" className="md:hidden h-8 w-8" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+              {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t mt-2 px-4 py-3 flex flex-col gap-3 text-sm font-medium text-muted-foreground bg-card">
+            <a href="#" className="hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>Home</a>
+            <a href="#about" className="hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>About Us</a>
+            <a href="#how-it-works" className="hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>Bursaries</a>
+            <a href="#how-it-works" className="hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>How It Works</a>
+            <a href="#contact" className="hover:text-foreground" onClick={() => setMobileMenuOpen(false)}>Contact</a>
+          </div>
+        )}
       </nav>
 
       {/* Hero */}
