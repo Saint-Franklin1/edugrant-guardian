@@ -18,6 +18,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import SelectAdminLevelPage from "./pages/SelectAdminLevelPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/select-admin-level" element={<SelectAdminLevelPage />} />
             <Route path="/accept-invite" element={<AcceptInvitePage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={['user']}>
                 <UserDashboard />
