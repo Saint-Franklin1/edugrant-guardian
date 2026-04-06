@@ -264,10 +264,10 @@ const UserDashboard = () => {
                         const uploaded = uploadedTypes.includes(dt.value);
                         return (
                           <div key={dt.value} className={`flex items-center gap-2.5 p-3 rounded-xl text-sm transition-colors ${
-                            uploaded ? 'bg-emerald-50 border border-emerald-200' : dt.required ? 'bg-red-50/60 border border-red-100' : 'bg-secondary/60'
+                            uploaded ? 'bg-emerald-50 border border-emerald-200 dark:bg-emerald-950 dark:border-emerald-800' : dt.required ? 'bg-destructive/5 border border-destructive/10' : 'bg-secondary/60'
                           }`}>
-                            {uploaded ? <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" /> : dt.required ? <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" /> : <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/20 shrink-0" />}
-                            <span className={uploaded ? 'text-emerald-800 font-medium' : 'text-foreground/70'}>{dt.label}</span>
+                            {uploaded ? <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" /> : dt.required ? <AlertTriangle className="h-4 w-4 text-destructive shrink-0" /> : <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/20 shrink-0" />}
+                            <span className={uploaded ? 'text-emerald-800 dark:text-emerald-300 font-medium' : 'text-foreground/70'}>{dt.label}</span>
                           </div>
                         );
                       })}
