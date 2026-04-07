@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_access_codes: {
+        Row: {
+          admin_level: string
+          code_hash: string
+          constituency: string | null
+          county: string | null
+          created_at: string | null
+          created_by: string | null
+          email: string
+          expires_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          used: boolean | null
+          ward: string | null
+        }
+        Insert: {
+          admin_level: string
+          code_hash: string
+          constituency?: string | null
+          county?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          used?: boolean | null
+          ward?: string | null
+        }
+        Update: {
+          admin_level?: string
+          code_hash?: string
+          constituency?: string | null
+          county?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          used?: boolean | null
+          ward?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -685,6 +730,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_role_secure: {
+        Args: {
+          new_role: Database["public"]["Enums"]["app_role"]
+          target_user: string
+        }
+        Returns: undefined
+      }
       get_student_constituency: {
         Args: { _student_id: string }
         Returns: string
