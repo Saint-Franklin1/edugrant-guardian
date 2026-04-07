@@ -120,7 +120,7 @@ const SuperAdminDashboard = () => {
     return { county, constituency, ward };
   };
 
-  const handleSendInvite = async () => {
+  const handleGenerateCode = async () => {
     if (!inviteEmail || !selectedCountyId) {
       toast({ title: 'Missing fields', description: 'Fill in email and county.', variant: 'destructive' }); return;
     }
@@ -140,20 +140,20 @@ const SuperAdminDashboard = () => {
 
     const { county, constituency, ward } = getSelectedNames();
     setSending(true);
-    const { data, error } = await supabase.functions.invoke('send-admin-invite', {
+    const { data, error } = await supabase.functions.invoke('generate-access-code', {
       body: { email: inviteEmail, role: inviteRole, admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, county, constituency, ward },
     });
     setSending(false);
 
     if (error || data?.error) {
-      toast({ title: 'Failed to send invite', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Failed to generate code', description: data?.error || error?.message, variant: 'destructive' });
     } else {
-      const emailInfo = data.email_sent
-        ? 'An invitation email has been sent to the invitee!'
-        : `Email delivery issue: ${data.email_error || 'unknown'}. Invite link copied to clipboard as backup.`;
-      toast({ title: data.email_sent ? '✅ Invitation Sent!' : '⚠️ Invitation Created', description: emailInfo });
-      const inviteLink = data.accept_url || `${window.location.origin}/accept-invite?token=${data.token}`;
-      navigator.clipboard?.writeText(inviteLink);
+      toast({
+        title: '✅ Access Code Generated!',
+        description: `Code: ${data.code} — Send this to ${data.email}. Expires in 15 minutes.`,
+        duration: 30000,
+      });
+      navigator.clipboard?.writeText(data.code);
       setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
@@ -350,8 +350,8 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-              <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
-                {sending ? 'Sending Invitation...' : `Send ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
+               <Button onClick={handleGenerateCode} disabled={sending} className="w-full h-11 rounded-xl">
+                {sending ? 'Generating Code...' : `Generate ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Access Code`}
               </Button>
               <p className="text-xs text-muted-foreground">📧 A magic link email will be sent to the invitee. The link expires in 1 hour.</p>
             </CardContent>
