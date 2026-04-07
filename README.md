@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Welcome to Elimu-Vault
 
 TODO: Document your project here
