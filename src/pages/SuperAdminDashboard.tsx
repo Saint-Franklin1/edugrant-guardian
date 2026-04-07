@@ -350,8 +350,8 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-              <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
-                {sending ? 'Sending Invitation...' : `Send ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
+               <Button onClick={handleGenerateCode} disabled={sending} className="w-full h-11 rounded-xl">
+                {sending ? 'Generating Code...' : `Generate ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Access Code`}
               </Button>
               <p className="text-xs text-muted-foreground">📧 A magic link email will be sent to the invitee. The link expires in 1 hour.</p>
             </CardContent>
