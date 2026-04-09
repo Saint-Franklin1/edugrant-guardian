@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building,
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
-  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList,
+  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList, Copy,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import {
@@ -137,29 +137,67 @@ const SuperAdminDashboard = () => {
 
     const { county, constituency, ward } = getSelectedNames();
     setSending(true);
-    const { data, error } = await supabase.functions.invoke('send-admin-invite', {
-      body: { 
-        email: inviteEmail, 
-        phone: invitePhone || undefined,
-        role: inviteRole, 
-        admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, 
-        county, 
-        constituency, 
-        ward 
-      },
-    });
+    
+    // Generate a unique token for the invitation
+    const inviteToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+    // Check for existing pending invitation
+    const { data: existing } = await supabase
+      .from('invitations')
+      .select('id')
+      .eq('invited_email', inviteEmail.toLowerCase())
+      .eq('status', 'pending')
+      .single();
+
+    if (existing) {
+      setSending(false);
+      toast({ title: 'Invitation exists', description: 'A pending invitation already exists for this email.', variant: 'destructive' });
+      return;
+    }
+
+    // Create invitation directly in database
+    const { data, error } = await supabase
+      .from('invitations')
+      .insert({
+        invited_email: inviteEmail.toLowerCase(),
+        phone: invitePhone || null,
+        role: inviteRole,
+        admin_level: effectiveLevel,
+        county,
+        constituency: constituency || null,
+        ward: ward || null,
+        invited_by: user?.id,
+        token: inviteToken,
+        expires_at: expiresAt,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
     setSending(false);
 
-    if (error || data?.error) {
-      toast({ title: 'Failed to send invitation', description: data?.error || error?.message, variant: 'destructive' });
+    if (error) {
+      toast({ title: 'Failed to create invitation', description: error.message, variant: 'destructive' });
     } else {
-      toast({
-        title: 'Invitation Sent!',
-        description: data.email_sent 
-          ? `An invitation email has been sent to ${data.email}. They have 7 days to accept.`
-          : `Invitation created for ${data.email}. They can log in to accept.`,
-        duration: 10000,
-      });
+      const inviteLink = `${window.location.origin}/accept-invite?token=${inviteToken}`;
+      
+      // Copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        toast({
+          title: 'Invitation Created',
+          description: `Invite link copied to clipboard. Share it with ${inviteEmail}. They have 7 days to accept.`,
+          duration: 15000,
+        });
+      } catch {
+        toast({
+          title: 'Invitation Created',
+          description: `Share this link with ${inviteEmail}: ${inviteLink}`,
+          duration: 30000,
+        });
+      }
+      
       setInviteEmail(''); setInvitePhone(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
@@ -182,6 +220,16 @@ const SuperAdminDashboard = () => {
     } else {
       toast({ title: 'Invitation revoked' });
       fetchData();
+    }
+  };
+
+  const handleCopyInviteLink = async (token: string, email: string) => {
+    const inviteLink = `${window.location.origin}/accept-invite?token=${token}`;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast({ title: 'Link copied', description: `Invite link for ${email} copied to clipboard.` });
+    } catch {
+      toast({ title: 'Copy failed', description: `Link: ${inviteLink}`, duration: 15000 });
     }
   };
 
@@ -312,7 +360,7 @@ const SuperAdminDashboard = () => {
               <CardTitle className="flex items-center gap-2 text-base">
                 <Mail className="h-4 w-4 text-primary" /> Send Staff Invitation
               </CardTitle>
-              <CardDescription>Send an invitation email with a magic link. The invitee will receive an email to set up their account and complete their profile.</CardDescription>
+              <CardDescription>Create an invitation and share the link with the invitee. They will use it to register or sign in and complete their profile setup.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 max-w-md">
               <div className="space-y-1.5">
@@ -380,9 +428,9 @@ const SuperAdminDashboard = () => {
               )}
 
               <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
-                {sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Invitation...</> : `Send ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
+                {sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Invitation...</> : `Create ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
               </Button>
-              <p className="text-xs text-muted-foreground">The invitation link expires in 7 days. The invitee will receive an email with instructions to complete their registration.</p>
+              <p className="text-xs text-muted-foreground">The invitation link will be copied to your clipboard. Share it with the invitee - it expires in 7 days.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -646,9 +694,14 @@ const SuperAdminDashboard = () => {
                           {inv.status}
                         </Badge>
                         {inv.status === 'pending' && (
-                          <Button size="sm" variant="ghost" className="h-8 text-amber-600 text-xs" onClick={() => handleRevokeInvitation(inv.id)}>
-                            Revoke
-                          </Button>
+                          <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleCopyInviteLink(inv.token, inv.invited_email)} title="Copy invite link">
+                              <Copy className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 text-amber-600 text-xs" onClick={() => handleRevokeInvitation(inv.id)}>
+                              Revoke
+                            </Button>
+                          </>
                         )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
