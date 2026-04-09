@@ -133,6 +133,30 @@ const AdminDashboard = () => {
     fetchData();
   };
 
+  const handleCreateAnnouncement = async () => {
+    if (!annTitle || !user || !profile) return;
+    setCreatingAnn(true);
+    const { error } = await supabase.from('announcements').insert({
+      title: annTitle,
+      description: annDesc || null,
+      category: annCategory || null,
+      eligibility: annEligibility || null,
+      deadline: annDeadline || null,
+      county: profile.county || null,
+      constituency: profile.constituency || null,
+      ward: profile.ward || null,
+      created_by: user.id,
+    } as any);
+    setCreatingAnn(false);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Announcement created!' });
+      setAnnTitle(''); setAnnDesc(''); setAnnCategory(''); setAnnEligibility(''); setAnnDeadline('');
+      fetchData();
+    }
+  };
+
   const handleLookup = async () => {
     if (!lookupId.trim()) return;
     setLookupLoading(true);
