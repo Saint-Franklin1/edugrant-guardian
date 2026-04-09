@@ -17,7 +17,7 @@ import { requiredDocumentTypes, documentTypes } from '@/lib/kenya-data';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertTriangle, CheckCircle, FileText, Upload, User, School, Hash,
-  GraduationCap, Loader2, Banknote, Calendar, DollarSign, Send, MapPin, Building2,
+  GraduationCap, Loader2, Banknote, Calendar, DollarSign, Send, MapPin, Building2, Megaphone,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import SchoolPaymentForm from '@/components/user/SchoolPaymentForm';
@@ -211,8 +211,16 @@ const UserDashboard = () => {
   return (
     <DashboardLayout title="Student Dashboard">
       <Tabs defaultValue="application">
-        <TabsList className="mb-6 rounded-xl">
+        <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="application" className="rounded-lg">My Application</TabsTrigger>
+          <TabsTrigger value="announcements" className="gap-1.5 rounded-lg">
+            <Megaphone className="h-3.5 w-3.5" /> Announcements
+            {announcements.filter(a => !a.deadline || new Date(a.deadline) > new Date()).length > 0 && (
+              <Badge className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">
+                {announcements.filter(a => !a.deadline || new Date(a.deadline) > new Date()).length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="bursaries" className="gap-1.5 rounded-lg">
             <Banknote className="h-3.5 w-3.5" /> Bursaries
             {openPrograms.length > 0 && <Badge className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">{openPrograms.length}</Badge>}
