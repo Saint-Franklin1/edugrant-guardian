@@ -42,6 +42,15 @@ const AdminDashboard = () => {
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
+  // Announcements
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annDesc, setAnnDesc] = useState('');
+  const [annCategory, setAnnCategory] = useState('');
+  const [annEligibility, setAnnEligibility] = useState('');
+  const [annDeadline, setAnnDeadline] = useState('');
+  const [creatingAnn, setCreatingAnn] = useState(false);
+
   const scopeLabel = getScopeLabel(profile, role);
 
   const fetchData = async () => {
@@ -56,11 +65,12 @@ const AdminDashboard = () => {
       studentList.forEach((s: any) => { s.studentProfile = profileMap[s.user_id]; });
     }
 
-    const [burRes, fraudRes, progRes, appRes] = await Promise.all([
+    const [burRes, fraudRes, progRes, appRes, annRes] = await Promise.all([
       supabase.from('bursary_records').select('*, student_profiles(student_name, school_name)'),
       supabase.from('fraud_flags').select('*, student_profiles(student_name)'),
       supabase.from('bursary_programs').select('*').order('created_at', { ascending: false }),
       supabase.from('bursary_applications').select('*, student_profiles(student_name, school_name), bursary_programs(title)'),
+      supabase.from('announcements').select('*').order('created_at', { ascending: false }),
     ]);
 
     setStudents(studentList);
@@ -68,6 +78,7 @@ const AdminDashboard = () => {
     setFraudFlags(fraudRes.data || []);
     setPrograms(progRes.data || []);
     setApplications(appRes.data || []);
+    setAnnouncements((annRes.data as any[]) || []);
     setLoading(false);
   };
 
