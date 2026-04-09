@@ -20,6 +20,7 @@ import SelectAdminLevelPage from "./pages/SelectAdminLevelPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import AdminRegisterPage from "./pages/AdminRegisterPage";
+import RequestAdminAccessPage from "./pages/RequestAdminAccessPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/accept-invite" element={<AcceptInvitePage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route path="/admin-register" element={<AdminRegisterPage />} />
+            <Route path="/request-admin-access" element={<RequestAdminAccessPage />} />
             <Route path="/dashboard" element={
               <ProtectedRoute allowedRoles={['user']}>
                 <UserDashboard />
