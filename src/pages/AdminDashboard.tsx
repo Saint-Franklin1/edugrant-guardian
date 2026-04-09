@@ -338,7 +338,82 @@ const AdminDashboard = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="bursary">
+        {/* ANNOUNCEMENTS TAB */}
+        <TabsContent value="announcements">
+          <div className="space-y-6">
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Megaphone className="h-4 w-4 text-primary" /> Create Announcement
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 max-w-lg">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Title *</Label>
+                  <Input value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="Announcement title" className="h-11 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Description</Label>
+                  <Textarea value={annDesc} onChange={e => setAnnDesc(e.target.value)} placeholder="Details..." rows={3} className="rounded-xl" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Category</Label>
+                    <Input value={annCategory} onChange={e => setAnnCategory(e.target.value)} placeholder="e.g. Bursary, Scholarship" className="h-11 rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Deadline</Label>
+                    <Input type="date" value={annDeadline} onChange={e => setAnnDeadline(e.target.value)} className="h-11 rounded-xl" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Eligibility</Label>
+                  <Input value={annEligibility} onChange={e => setAnnEligibility(e.target.value)} placeholder="Who can apply?" className="h-11 rounded-xl" />
+                </div>
+                <Button onClick={handleCreateAnnouncement} disabled={creatingAnn || !annTitle} className="w-full h-11 rounded-xl">
+                  {creatingAnn ? 'Creating...' : 'Post Announcement'}
+                </Button>
+                <p className="text-xs text-muted-foreground">Scoped to your jurisdiction: {profile?.county}{profile?.constituency ? ` > ${profile.constituency}` : ''}{profile?.ward ? ` > ${profile.ward}` : ''}</p>
+              </CardContent>
+            </Card>
+
+            {/* Existing Announcements */}
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Your Announcements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {announcements.filter(a => a.created_by === user?.id).length === 0 ? (
+                  <div className="text-center py-12">
+                    <Megaphone className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No announcements yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {announcements.filter(a => a.created_by === user?.id).map(a => (
+                      <div key={a.id} className="p-4 rounded-xl bg-secondary/60">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{a.title}</p>
+                            {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
+                            <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
+                              {a.category && <Badge variant="outline" className="rounded-full text-xs">{a.category}</Badge>}
+                              {a.deadline && <span>Deadline: {new Date(a.deadline).toLocaleDateString()}</span>}
+                            </div>
+                          </div>
+                          <Badge variant={a.status === 'active' && (!a.deadline || new Date(a.deadline) > new Date()) ? 'default' : 'secondary'} className="rounded-full text-xs">
+                            {a.deadline && new Date(a.deadline) < new Date() ? 'Expired' : a.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Bursary Lifecycle</CardTitle>
