@@ -15,7 +15,7 @@ import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle,
-  MapPin, ArrowLeft, MessageSquare, Banknote, Loader2, Search,
+  MapPin, ArrowLeft, MessageSquare, Banknote, Loader2, Search, Megaphone,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import BursaryProgramManager from '@/components/admin/BursaryProgramManager';
@@ -295,6 +295,7 @@ const AdminDashboard = () => {
       <Tabs defaultValue="applications">
         <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="applications" className="rounded-lg text-xs sm:text-sm">Applications</TabsTrigger>
+          <TabsTrigger value="announcements" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Megaphone className="h-3.5 w-3.5" /> Announcements</TabsTrigger>
           <TabsTrigger value="bursary" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Banknote className="h-3.5 w-3.5" /> Bursary</TabsTrigger>
           <TabsTrigger value="programs" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Banknote className="h-3.5 w-3.5" /> Programs</TabsTrigger>
           <TabsTrigger value="lookup" className="gap-1.5 rounded-lg"><Search className="h-3.5 w-3.5" /> Lookup</TabsTrigger>
