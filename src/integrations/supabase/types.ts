@@ -59,6 +59,144 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_requests: {
+        Row: {
+          constituency: string | null
+          county: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          requested_level: string
+          requested_role: Database["public"]["Enums"]["app_role"]
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          ward: string | null
+        }
+        Insert: {
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          requested_level: string
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          ward?: string | null
+        }
+        Update: {
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          requested_level?: string
+          requested_role?: Database["public"]["Enums"]["app_role"]
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          ward?: string | null
+        }
+        Relationships: []
+      }
+      announcement_applications: {
+        Row: {
+          announcement_id: string
+          created_at: string
+          id: string
+          status: string
+          student_id: string
+          user_id: string
+        }
+        Insert: {
+          announcement_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          student_id: string
+          user_id: string
+        }
+        Update: {
+          announcement_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          student_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcement_applications_announcement_id_fkey"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "announcement_applications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      announcements: {
+        Row: {
+          category: string | null
+          constituency: string | null
+          county: string | null
+          created_at: string
+          created_by: string
+          deadline: string | null
+          description: string | null
+          eligibility: string | null
+          id: string
+          status: string
+          title: string
+          updated_at: string
+          ward: string | null
+        }
+        Insert: {
+          category?: string | null
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          created_by: string
+          deadline?: string | null
+          description?: string | null
+          eligibility?: string | null
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+          ward?: string | null
+        }
+        Update: {
+          category?: string | null
+          constituency?: string | null
+          county?: string | null
+          created_at?: string
+          created_by?: string
+          deadline?: string | null
+          description?: string | null
+          eligibility?: string | null
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          ward?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
