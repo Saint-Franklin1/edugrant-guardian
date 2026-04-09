@@ -29,6 +29,11 @@ const RegisterPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Session cleanup on mount
+  useState(() => {
+    supabase.auth.signOut();
+  });
+
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
   const passwordValid = useMemo(() => PASSWORD_RULES.every(r => r.test(form.password)), [form.password]);
