@@ -326,6 +326,51 @@ const UserDashboard = () => {
           </div>
         </TabsContent>
 
+        {/* ANNOUNCEMENTS TAB */}
+        <TabsContent value="announcements">
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Megaphone className="h-4 w-4 text-primary" /> Announcements
+              </CardTitle>
+              <CardDescription>View announcements from administrators in your area.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {announcements.length === 0 ? (
+                <div className="text-center py-12">
+                  <Megaphone className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No announcements at the moment.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {announcements.map(a => {
+                    const expired = a.deadline && new Date(a.deadline) < new Date();
+                    return (
+                      <div key={a.id} className={`p-4 rounded-xl bg-secondary/60 ${expired ? 'opacity-60' : ''}`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="font-medium text-sm">{a.title}</h4>
+                            {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
+                          </div>
+                          <Badge variant={expired ? 'secondary' : 'default'} className="rounded-full text-xs shrink-0">
+                            {expired ? 'Expired' : 'Active'}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-2 text-xs text-muted-foreground">
+                          {a.category && <Badge variant="outline" className="rounded-full text-xs">{a.category}</Badge>}
+                          {a.eligibility && <span>Eligibility: {a.eligibility}</span>}
+                          {a.deadline && <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(a.deadline).toLocaleDateString()}</span>}
+                          {a.county && <span>{a.county}{a.constituency ? ` > ${a.constituency}` : ''}{a.ward ? ` > ${a.ward}` : ''}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* BURSARIES TAB */}
         <TabsContent value="bursaries">
           <div className="space-y-6">
