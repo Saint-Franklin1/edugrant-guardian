@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -19,9 +19,9 @@ const LoginPage = () => {
   const { toast } = useToast();
 
   // Session cleanup on mount
-  useState(() => {
+  useEffect(() => {
     supabase.auth.signOut();
-  });
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
