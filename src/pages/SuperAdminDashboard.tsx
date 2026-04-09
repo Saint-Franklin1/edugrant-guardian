@@ -32,6 +32,7 @@ const SuperAdminDashboard = () => {
   const { toast } = useToast();
 
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'chief'>('admin');
   const [inviteLevel, setInviteLevel] = useState('');
   const [selectedCountyId, setSelectedCountyId] = useState('');
@@ -116,7 +117,7 @@ const SuperAdminDashboard = () => {
     return { county, constituency, ward };
   };
 
-  const handleGenerateCode = async () => {
+  const handleSendInvite = async () => {
     if (!inviteEmail || !selectedCountyId) {
       toast({ title: 'Missing fields', description: 'Fill in email and county.', variant: 'destructive' }); return;
     }
@@ -136,21 +137,30 @@ const SuperAdminDashboard = () => {
 
     const { county, constituency, ward } = getSelectedNames();
     setSending(true);
-    const { data, error } = await supabase.functions.invoke('generate-access-code', {
-      body: { email: inviteEmail, role: inviteRole, admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, county, constituency, ward },
+    const { data, error } = await supabase.functions.invoke('send-admin-invite', {
+      body: { 
+        email: inviteEmail, 
+        phone: invitePhone || undefined,
+        role: inviteRole, 
+        admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, 
+        county, 
+        constituency, 
+        ward 
+      },
     });
     setSending(false);
 
     if (error || data?.error) {
-      toast({ title: 'Failed to generate code', description: data?.error || error?.message, variant: 'destructive' });
+      toast({ title: 'Failed to send invitation', description: data?.error || error?.message, variant: 'destructive' });
     } else {
       toast({
-        title: '✅ Access Code Generated!',
-        description: `Code: ${data.code} — Send this to ${data.email}. Expires in 15 minutes.`,
-        duration: 30000,
+        title: 'Invitation Sent!',
+        description: data.email_sent 
+          ? `An invitation email has been sent to ${data.email}. They have 7 days to accept.`
+          : `Invitation created for ${data.email}. They can log in to accept.`,
+        duration: 10000,
       });
-      navigator.clipboard?.writeText(data.code);
-      setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
+      setInviteEmail(''); setInvitePhone(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
   };
@@ -191,13 +201,14 @@ const SuperAdminDashboard = () => {
   };
 
   const handleApproveRequest = async (req: any) => {
-    // Pre-fill invite form with request data and generate code
+    // Pre-fill invite form with request data
     setInviteEmail(req.email);
+    setInvitePhone(req.phone || '');
     setInviteRole(req.requested_level === 'ward' ? 'chief' : 'admin');
     if (req.requested_level !== 'ward') setInviteLevel(req.requested_level);
     // Mark request as approved
     await supabase.from('admin_requests').update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any).eq('id', req.id);
-    toast({ title: 'Request approved', description: 'Now generate an access code in the Invite tab for this user.' });
+    toast({ title: 'Request approved', description: 'Now send an invitation email from the Invite tab.' });
     fetchData();
   };
 
@@ -299,17 +310,22 @@ const SuperAdminDashboard = () => {
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserPlus className="h-4 w-4 text-primary" /> Generate Access Code
+                <Mail className="h-4 w-4 text-primary" /> Send Staff Invitation
               </CardTitle>
-              <CardDescription>Generate a secure 6-digit access code for a new staff member. Share the code manually — it expires in 15 minutes.</CardDescription>
+              <CardDescription>Send an invitation email with a magic link. The invitee will receive an email to set up their account and complete their profile.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 max-w-md">
               <div className="space-y-1.5">
-                <Label className="text-sm">Email Address</Label>
+                <Label className="text-sm">Email Address *</Label>
                 <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="staff@example.com" type="email" className="h-11 rounded-xl" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Role</Label>
+                <Label className="text-sm">Phone Number</Label>
+                <Input value={invitePhone} onChange={e => setInvitePhone(e.target.value)} placeholder="0712345678" type="tel" className="h-11 rounded-xl" />
+                <p className="text-xs text-muted-foreground">Optional. Will be pre-filled in their profile.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Role *</Label>
                 <Select value={inviteRole} onValueChange={v => { setInviteRole(v as 'admin' | 'chief'); setInviteLevel(''); setSelectedCountyId(''); }}>
                   <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select role" /></SelectTrigger>
                   <SelectContent>
@@ -363,10 +379,10 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-              <Button onClick={handleGenerateCode} disabled={sending} className="w-full h-11 rounded-xl">
-                {sending ? 'Generating Code...' : `Generate ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Access Code`}
+              <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
+                {sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sending Invitation...</> : `Send ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
               </Button>
-              <p className="text-xs text-muted-foreground">🔒 The code expires in 15 minutes and can only be used once. Share it securely with the invitee.</p>
+              <p className="text-xs text-muted-foreground">The invitation link expires in 7 days. The invitee will receive an email with instructions to complete their registration.</p>
             </CardContent>
           </Card>
         </TabsContent>

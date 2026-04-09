@@ -609,6 +609,7 @@ export type Database = {
           id: string
           invited_by: string
           invited_email: string
+          phone: string | null
           role: Database["public"]["Enums"]["app_role"]
           status: string
           token: string
@@ -623,6 +624,7 @@ export type Database = {
           id?: string
           invited_by: string
           invited_email: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
           token: string
@@ -637,6 +639,7 @@ export type Database = {
           id?: string
           invited_by?: string
           invited_email?: string
+          phone?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
           token?: string
