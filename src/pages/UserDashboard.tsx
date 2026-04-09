@@ -44,6 +44,9 @@ const UserDashboard = () => {
   const [myDisbursements, setMyDisbursements] = useState<any[]>([]);
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
 
+  // Announcements
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+
   const fetchData = async () => {
     if (!user) return;
     const { data } = await supabase.from('student_profiles').select('*').eq('user_id', user.id).single();
@@ -60,6 +63,10 @@ const UserDashboard = () => {
     // Fetch bursary programs
     const { data: progData } = await supabase.from('bursary_programs').select('*').order('deadline', { ascending: true });
     setPrograms(progData || []);
+
+    // Fetch announcements
+    const { data: annData } = await supabase.from('announcements').select('*').eq('status', 'active').order('created_at', { ascending: false });
+    setAnnouncements((annData as any[]) || []);
 
     // Fetch my applications
     const { data: appData } = await supabase.from('bursary_applications').select('*, bursary_programs(title, deadline, per_student_amount)').eq('user_id', user.id);
