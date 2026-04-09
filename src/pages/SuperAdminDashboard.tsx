@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building,
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
-  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList,
+  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList, Copy,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import {
@@ -32,6 +32,7 @@ const SuperAdminDashboard = () => {
   const { toast } = useToast();
 
   const [inviteEmail, setInviteEmail] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'chief'>('admin');
   const [inviteLevel, setInviteLevel] = useState('');
   const [selectedCountyId, setSelectedCountyId] = useState('');
@@ -116,7 +117,7 @@ const SuperAdminDashboard = () => {
     return { county, constituency, ward };
   };
 
-  const handleGenerateCode = async () => {
+  const handleSendInvite = async () => {
     if (!inviteEmail || !selectedCountyId) {
       toast({ title: 'Missing fields', description: 'Fill in email and county.', variant: 'destructive' }); return;
     }
@@ -136,21 +137,68 @@ const SuperAdminDashboard = () => {
 
     const { county, constituency, ward } = getSelectedNames();
     setSending(true);
-    const { data, error } = await supabase.functions.invoke('generate-access-code', {
-      body: { email: inviteEmail, role: inviteRole, admin_level: inviteRole === 'chief' ? 'ward' : inviteLevel, county, constituency, ward },
-    });
+    
+    // Generate a unique token for the invitation
+    const inviteToken = crypto.randomUUID();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
+
+    // Check for existing pending invitation
+    const { data: existing } = await supabase
+      .from('invitations')
+      .select('id')
+      .eq('invited_email', inviteEmail.toLowerCase())
+      .eq('status', 'pending')
+      .single();
+
+    if (existing) {
+      setSending(false);
+      toast({ title: 'Invitation exists', description: 'A pending invitation already exists for this email.', variant: 'destructive' });
+      return;
+    }
+
+    // Create invitation directly in database
+    const { data, error } = await supabase
+      .from('invitations')
+      .insert({
+        invited_email: inviteEmail.toLowerCase(),
+        phone: invitePhone || null,
+        role: inviteRole,
+        admin_level: effectiveLevel,
+        county,
+        constituency: constituency || null,
+        ward: ward || null,
+        invited_by: user?.id,
+        token: inviteToken,
+        expires_at: expiresAt,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
     setSending(false);
 
-    if (error || data?.error) {
-      toast({ title: 'Failed to generate code', description: data?.error || error?.message, variant: 'destructive' });
+    if (error) {
+      toast({ title: 'Failed to create invitation', description: error.message, variant: 'destructive' });
     } else {
-      toast({
-        title: '✅ Access Code Generated!',
-        description: `Code: ${data.code} — Send this to ${data.email}. Expires in 15 minutes.`,
-        duration: 30000,
-      });
-      navigator.clipboard?.writeText(data.code);
-      setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
+      const inviteLink = `${window.location.origin}/accept-invite?token=${inviteToken}`;
+      
+      // Copy link to clipboard
+      try {
+        await navigator.clipboard.writeText(inviteLink);
+        toast({
+          title: 'Invitation Created',
+          description: `Invite link copied to clipboard. Share it with ${inviteEmail}. They have 7 days to accept.`,
+          duration: 15000,
+        });
+      } catch {
+        toast({
+          title: 'Invitation Created',
+          description: `Share this link with ${inviteEmail}: ${inviteLink}`,
+          duration: 30000,
+        });
+      }
+      
+      setInviteEmail(''); setInvitePhone(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
   };
@@ -175,6 +223,16 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleCopyInviteLink = async (token: string, email: string) => {
+    const inviteLink = `${window.location.origin}/accept-invite?token=${token}`;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      toast({ title: 'Link copied', description: `Invite link for ${email} copied to clipboard.` });
+    } catch {
+      toast({ title: 'Copy failed', description: `Link: ${inviteLink}`, duration: 15000 });
+    }
+  };
+
   const handleUserAction = async (targetUserId: string, action: 'suspend' | 'ban' | 'activate' | 'delete') => {
     setActionLoading(targetUserId);
     const { data, error } = await supabase.functions.invoke('manage-user', {
@@ -191,13 +249,14 @@ const SuperAdminDashboard = () => {
   };
 
   const handleApproveRequest = async (req: any) => {
-    // Pre-fill invite form with request data and generate code
+    // Pre-fill invite form with request data
     setInviteEmail(req.email);
+    setInvitePhone(req.phone || '');
     setInviteRole(req.requested_level === 'ward' ? 'chief' : 'admin');
     if (req.requested_level !== 'ward') setInviteLevel(req.requested_level);
     // Mark request as approved
     await supabase.from('admin_requests').update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any).eq('id', req.id);
-    toast({ title: 'Request approved', description: 'Now generate an access code in the Invite tab for this user.' });
+    toast({ title: 'Request approved', description: 'Now send an invitation email from the Invite tab.' });
     fetchData();
   };
 
@@ -299,17 +358,22 @@ const SuperAdminDashboard = () => {
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserPlus className="h-4 w-4 text-primary" /> Generate Access Code
+                <Mail className="h-4 w-4 text-primary" /> Send Staff Invitation
               </CardTitle>
-              <CardDescription>Generate a secure 6-digit access code for a new staff member. Share the code manually — it expires in 15 minutes.</CardDescription>
+              <CardDescription>Create an invitation and share the link with the invitee. They will use it to register or sign in and complete their profile setup.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 max-w-md">
               <div className="space-y-1.5">
-                <Label className="text-sm">Email Address</Label>
+                <Label className="text-sm">Email Address *</Label>
                 <Input value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="staff@example.com" type="email" className="h-11 rounded-xl" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-sm">Role</Label>
+                <Label className="text-sm">Phone Number</Label>
+                <Input value={invitePhone} onChange={e => setInvitePhone(e.target.value)} placeholder="0712345678" type="tel" className="h-11 rounded-xl" />
+                <p className="text-xs text-muted-foreground">Optional. Will be pre-filled in their profile.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm">Role *</Label>
                 <Select value={inviteRole} onValueChange={v => { setInviteRole(v as 'admin' | 'chief'); setInviteLevel(''); setSelectedCountyId(''); }}>
                   <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Select role" /></SelectTrigger>
                   <SelectContent>
@@ -363,10 +427,10 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-              <Button onClick={handleGenerateCode} disabled={sending} className="w-full h-11 rounded-xl">
-                {sending ? 'Generating Code...' : `Generate ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Access Code`}
+              <Button onClick={handleSendInvite} disabled={sending} className="w-full h-11 rounded-xl">
+                {sending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating Invitation...</> : `Create ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Invitation`}
               </Button>
-              <p className="text-xs text-muted-foreground">🔒 The code expires in 15 minutes and can only be used once. Share it securely with the invitee.</p>
+              <p className="text-xs text-muted-foreground">The invitation link will be copied to your clipboard. Share it with the invitee - it expires in 7 days.</p>
             </CardContent>
           </Card>
         </TabsContent>
@@ -630,9 +694,14 @@ const SuperAdminDashboard = () => {
                           {inv.status}
                         </Badge>
                         {inv.status === 'pending' && (
-                          <Button size="sm" variant="ghost" className="h-8 text-amber-600 text-xs" onClick={() => handleRevokeInvitation(inv.id)}>
-                            Revoke
-                          </Button>
+                          <>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleCopyInviteLink(inv.token, inv.invited_email)} title="Copy invite link">
+                              <Copy className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-8 text-amber-600 text-xs" onClick={() => handleRevokeInvitation(inv.id)}>
+                              Revoke
+                            </Button>
+                          </>
                         )}
                         <AlertDialog>
                           <AlertDialogTrigger asChild>

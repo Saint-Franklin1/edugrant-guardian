@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { lovable } from '@/integrations/lovable/index';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,10 +40,13 @@ const LoginPage = () => {
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
-    const { error } = await lovable.auth.signInWithOAuth('google', { redirect_uri: window.location.origin });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/auth/callback` }
+    });
     setGoogleLoading(false);
     if (error) {
-      toast({ title: 'Google login failed', description: String(error), variant: 'destructive' });
+      toast({ title: 'Google login failed', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -91,8 +93,8 @@ const LoginPage = () => {
 
             <div className="text-center text-sm text-muted-foreground mt-5 space-y-1.5">
               <p><Link to="/forgot-password" className="text-primary font-medium hover:underline">Forgot password?</Link></p>
-              <p>Don't have an account? <Link to="/register" className="text-primary font-medium hover:underline">Register</Link></p>
-              <p>Staff? <Link to="/admin-register" className="text-primary font-medium hover:underline">Register with Access Code</Link></p>
+              <p>{"Don't have an account?"} <Link to="/register" className="text-primary font-medium hover:underline">Register</Link></p>
+              <p>Want to become staff? <Link to="/request-admin-access" className="text-primary font-medium hover:underline">Request Access</Link></p>
             </div>
           </CardContent>
         </Card>

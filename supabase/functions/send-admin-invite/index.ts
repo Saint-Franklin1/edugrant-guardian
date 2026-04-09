@@ -48,11 +48,18 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, role: inviteRole, admin_level, county, constituency, ward } = body;
+    const { email, phone, role: inviteRole, admin_level, county, constituency, ward } = body;
 
     // Validate required fields
     if (!email || !inviteRole || !county) {
       return new Response(JSON.stringify({ error: 'Missing required fields: email, role, county' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Validate phone if provided
+    if (phone && !/^(\+?254|0)?[17]\d{8}$/.test(phone.replace(/\s/g, ''))) {
+      return new Response(JSON.stringify({ error: 'Invalid phone number format. Use Kenyan format (e.g., 0712345678 or +254712345678)' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -116,15 +123,16 @@ serve(async (req) => {
       }
     }
 
-    // Generate token and expiry (1 hour)
+    // Generate token and expiry (7 days for email invites)
     const inviteToken = crypto.randomUUID();
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    // Store invitation
+    // Store invitation with phone number
     const { data: invitation, error: insertError } = await supabaseAdmin
       .from('invitations')
       .insert({
         invited_email: email,
+        phone: phone || null,
         role: inviteRole,
         admin_level: inviteRole === 'chief' ? 'ward' : admin_level,
         county,
