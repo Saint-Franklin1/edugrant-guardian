@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -17,6 +17,11 @@ const LoginPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Session cleanup on mount
+  useEffect(() => {
+    supabase.auth.signOut();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +92,7 @@ const LoginPage = () => {
             <div className="text-center text-sm text-muted-foreground mt-5 space-y-1.5">
               <p><Link to="/forgot-password" className="text-primary font-medium hover:underline">Forgot password?</Link></p>
               <p>Don't have an account? <Link to="/register" className="text-primary font-medium hover:underline">Register</Link></p>
+              <p>Staff? <Link to="/admin-register" className="text-primary font-medium hover:underline">Register with Access Code</Link></p>
             </div>
           </CardContent>
         </Card>

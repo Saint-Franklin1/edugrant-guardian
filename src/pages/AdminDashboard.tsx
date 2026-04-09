@@ -15,7 +15,7 @@ import DocumentList from '@/components/user/DocumentList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Shield, CheckCircle, XCircle, Users, TrendingUp, AlertTriangle,
-  MapPin, ArrowLeft, MessageSquare, Banknote, Loader2, Search,
+  MapPin, ArrowLeft, MessageSquare, Banknote, Loader2, Search, Megaphone,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import BursaryProgramManager from '@/components/admin/BursaryProgramManager';
@@ -42,6 +42,15 @@ const AdminDashboard = () => {
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
 
+  // Announcements
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [annTitle, setAnnTitle] = useState('');
+  const [annDesc, setAnnDesc] = useState('');
+  const [annCategory, setAnnCategory] = useState('');
+  const [annEligibility, setAnnEligibility] = useState('');
+  const [annDeadline, setAnnDeadline] = useState('');
+  const [creatingAnn, setCreatingAnn] = useState(false);
+
   const scopeLabel = getScopeLabel(profile, role);
 
   const fetchData = async () => {
@@ -56,11 +65,12 @@ const AdminDashboard = () => {
       studentList.forEach((s: any) => { s.studentProfile = profileMap[s.user_id]; });
     }
 
-    const [burRes, fraudRes, progRes, appRes] = await Promise.all([
+    const [burRes, fraudRes, progRes, appRes, annRes] = await Promise.all([
       supabase.from('bursary_records').select('*, student_profiles(student_name, school_name)'),
       supabase.from('fraud_flags').select('*, student_profiles(student_name)'),
       supabase.from('bursary_programs').select('*').order('created_at', { ascending: false }),
       supabase.from('bursary_applications').select('*, student_profiles(student_name, school_name), bursary_programs(title)'),
+      supabase.from('announcements').select('*').order('created_at', { ascending: false }),
     ]);
 
     setStudents(studentList);
@@ -68,6 +78,7 @@ const AdminDashboard = () => {
     setFraudFlags(fraudRes.data || []);
     setPrograms(progRes.data || []);
     setApplications(appRes.data || []);
+    setAnnouncements((annRes.data as any[]) || []);
     setLoading(false);
   };
 
@@ -120,6 +131,30 @@ const AdminDashboard = () => {
     await supabase.from('bursary_applications').update({ status, reviewed_at: new Date().toISOString(), reviewed_by: user?.id }).eq('id', appId);
     toast({ title: `Application ${status}` });
     fetchData();
+  };
+
+  const handleCreateAnnouncement = async () => {
+    if (!annTitle || !user || !profile) return;
+    setCreatingAnn(true);
+    const { error } = await supabase.from('announcements').insert({
+      title: annTitle,
+      description: annDesc || null,
+      category: annCategory || null,
+      eligibility: annEligibility || null,
+      deadline: annDeadline || null,
+      county: profile.county || null,
+      constituency: profile.constituency || null,
+      ward: profile.ward || null,
+      created_by: user.id,
+    } as any);
+    setCreatingAnn(false);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Announcement created!' });
+      setAnnTitle(''); setAnnDesc(''); setAnnCategory(''); setAnnEligibility(''); setAnnDeadline('');
+      fetchData();
+    }
   };
 
   const handleLookup = async () => {
@@ -260,6 +295,7 @@ const AdminDashboard = () => {
       <Tabs defaultValue="applications">
         <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="applications" className="rounded-lg text-xs sm:text-sm">Applications</TabsTrigger>
+          <TabsTrigger value="announcements" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Megaphone className="h-3.5 w-3.5" /> Announcements</TabsTrigger>
           <TabsTrigger value="bursary" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Banknote className="h-3.5 w-3.5" /> Bursary</TabsTrigger>
           <TabsTrigger value="programs" className="gap-1 sm:gap-1.5 rounded-lg text-xs sm:text-sm"><Banknote className="h-3.5 w-3.5" /> Programs</TabsTrigger>
           <TabsTrigger value="lookup" className="gap-1.5 rounded-lg"><Search className="h-3.5 w-3.5" /> Lookup</TabsTrigger>
@@ -300,6 +336,82 @@ const AdminDashboard = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ANNOUNCEMENTS TAB */}
+        <TabsContent value="announcements">
+          <div className="space-y-6">
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Megaphone className="h-4 w-4 text-primary" /> Create Announcement
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 max-w-lg">
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Title *</Label>
+                  <Input value={annTitle} onChange={e => setAnnTitle(e.target.value)} placeholder="Announcement title" className="h-11 rounded-xl" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Description</Label>
+                  <Textarea value={annDesc} onChange={e => setAnnDesc(e.target.value)} placeholder="Details..." rows={3} className="rounded-xl" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Category</Label>
+                    <Input value={annCategory} onChange={e => setAnnCategory(e.target.value)} placeholder="e.g. Bursary, Scholarship" className="h-11 rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm">Deadline</Label>
+                    <Input type="date" value={annDeadline} onChange={e => setAnnDeadline(e.target.value)} className="h-11 rounded-xl" />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm">Eligibility</Label>
+                  <Input value={annEligibility} onChange={e => setAnnEligibility(e.target.value)} placeholder="Who can apply?" className="h-11 rounded-xl" />
+                </div>
+                <Button onClick={handleCreateAnnouncement} disabled={creatingAnn || !annTitle} className="w-full h-11 rounded-xl">
+                  {creatingAnn ? 'Creating...' : 'Post Announcement'}
+                </Button>
+                <p className="text-xs text-muted-foreground">Scoped to your jurisdiction: {profile?.county}{profile?.constituency ? ` > ${profile.constituency}` : ''}{profile?.ward ? ` > ${profile.ward}` : ''}</p>
+              </CardContent>
+            </Card>
+
+            {/* Existing Announcements */}
+            <Card className="rounded-2xl shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-base">Your Announcements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {announcements.filter(a => a.created_by === user?.id).length === 0 ? (
+                  <div className="text-center py-12">
+                    <Megaphone className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">No announcements yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {announcements.filter(a => a.created_by === user?.id).map(a => (
+                      <div key={a.id} className="p-4 rounded-xl bg-secondary/60">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{a.title}</p>
+                            {a.description && <p className="text-xs text-muted-foreground mt-1">{a.description}</p>}
+                            <div className="flex gap-2 mt-2 text-xs text-muted-foreground">
+                              {a.category && <Badge variant="outline" className="rounded-full text-xs">{a.category}</Badge>}
+                              {a.deadline && <span>Deadline: {new Date(a.deadline).toLocaleDateString()}</span>}
+                            </div>
+                          </div>
+                          <Badge variant={a.status === 'active' && (!a.deadline || new Date(a.deadline) > new Date()) ? 'default' : 'secondary'} className="rounded-full text-xs">
+                            {a.deadline && new Date(a.deadline) < new Date() ? 'Expired' : a.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="bursary">

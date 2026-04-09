@@ -13,19 +13,12 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building,
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
-  Trash2, Ban, UserX, RotateCcw, Search, QrCode, Eye,
+  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import DocumentList from '@/components/user/DocumentList';
 import StatusBadge from '@/components/common/StatusBadge';
@@ -54,6 +47,7 @@ const SuperAdminDashboard = () => {
   const [students, setStudents] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [adminRequests, setAdminRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -80,17 +74,19 @@ const SuperAdminDashboard = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [invRes, studRes, auditRes, profilesRes, rolesRes] = await Promise.all([
+    const [invRes, studRes, auditRes, profilesRes, rolesRes, reqRes] = await Promise.all([
       supabase.from('invitations').select('*').order('created_at', { ascending: false }),
       supabase.from('student_profiles').select('*'),
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(50),
       supabase.from('profiles').select('*'),
       supabase.from('user_roles').select('*'),
+      supabase.from('admin_requests').select('*').order('created_at', { ascending: false }),
     ]);
 
     setInvitations(invRes.data || []);
     setStudents(studRes.data || []);
     setAuditLogs(auditRes.data || []);
+    setAdminRequests((reqRes.data as any[]) || []);
 
     const roles = rolesRes.data || [];
     const profiles = profilesRes.data || [];
@@ -194,15 +190,27 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const handleApproveRequest = async (req: any) => {
+    // Pre-fill invite form with request data and generate code
+    setInviteEmail(req.email);
+    setInviteRole(req.requested_level === 'ward' ? 'chief' : 'admin');
+    if (req.requested_level !== 'ward') setInviteLevel(req.requested_level);
+    // Mark request as approved
+    await supabase.from('admin_requests').update({ status: 'approved', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any).eq('id', req.id);
+    toast({ title: 'Request approved', description: 'Now generate an access code in the Invite tab for this user.' });
+    fetchData();
+  };
+
+  const handleRejectRequest = async (reqId: string) => {
+    await supabase.from('admin_requests').update({ status: 'rejected', reviewed_by: user?.id, reviewed_at: new Date().toISOString() } as any).eq('id', reqId);
+    toast({ title: 'Request rejected' });
+    fetchData();
+  };
+
   const handleLookup = async () => {
     if (!lookupId.trim()) return;
     setLookupLoading(true);
     setLookupResult(null);
-    const { data, error } = await supabase.functions.invoke('lookup-student', {
-      body: {},
-      headers: {},
-    });
-    // Use GET with query params via fetch
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/lookup-student?education_id=${encodeURIComponent(lookupId.trim())}`;
     const res = await fetch(url, {
       headers: {
@@ -232,11 +240,12 @@ const SuperAdminDashboard = () => {
     );
   }
 
+  const pendingRequests = adminRequests.filter(r => r.status === 'pending');
   const stats = {
     totalUsers: allUsers.length,
     totalAdmins: admins.length,
     totalStudents: students.length,
-    pendingInvites: invitations.filter(i => i.status === 'pending').length,
+    pendingRequests: pendingRequests.length,
   };
 
   return (
@@ -253,7 +262,7 @@ const SuperAdminDashboard = () => {
           { label: 'Total Users', value: stats.totalUsers, icon: Users },
           { label: 'Admins & Chiefs', value: stats.totalAdmins, icon: Shield },
           { label: 'Student Applications', value: stats.totalStudents, icon: FileText },
-          { label: 'Pending Invites', value: stats.pendingInvites, icon: Mail },
+          { label: 'Pending Requests', value: stats.pendingRequests, icon: ClipboardList },
         ].map(s => (
           <Card key={s.label} className="rounded-2xl shadow-sm">
             <CardContent className="p-5">
@@ -274,9 +283,13 @@ const SuperAdminDashboard = () => {
       <Tabs defaultValue="invite">
         <TabsList className="mb-6 rounded-xl flex-wrap h-auto gap-1 p-1">
           <TabsTrigger value="invite" className="gap-1.5 rounded-lg"><UserPlus className="h-3.5 w-3.5" /> Invite</TabsTrigger>
+          <TabsTrigger value="requests" className="gap-1.5 rounded-lg">
+            <ClipboardList className="h-3.5 w-3.5" /> Requests
+            {pendingRequests.length > 0 && <Badge variant="destructive" className="ml-1 text-xs h-5 w-5 p-0 flex items-center justify-center rounded-full">{pendingRequests.length}</Badge>}
+          </TabsTrigger>
           <TabsTrigger value="admins" className="gap-1.5 rounded-lg"><Shield className="h-3.5 w-3.5" /> Staff</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5 rounded-lg"><Users className="h-3.5 w-3.5" /> Users</TabsTrigger>
-          <TabsTrigger value="invitations" className="gap-1.5 rounded-lg"><Mail className="h-3.5 w-3.5" /> Invitations</TabsTrigger>
+          <TabsTrigger value="invitations" className="gap-1.5 rounded-lg"><Mail className="h-3.5 w-3.5" /> History</TabsTrigger>
           <TabsTrigger value="lookup" className="gap-1.5 rounded-lg"><Search className="h-3.5 w-3.5" /> Lookup</TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5 rounded-lg"><Activity className="h-3.5 w-3.5" /> Audit</TabsTrigger>
         </TabsList>
@@ -286,9 +299,9 @@ const SuperAdminDashboard = () => {
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <UserPlus className="h-4 w-4 text-primary" /> Invite Staff Member
+                <UserPlus className="h-4 w-4 text-primary" /> Generate Access Code
               </CardTitle>
-              <CardDescription>Send a secure invitation email with a magic link. The invitee will receive it in their inbox.</CardDescription>
+              <CardDescription>Generate a secure 6-digit access code for a new staff member. Share the code manually — it expires in 15 minutes.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 max-w-md">
               <div className="space-y-1.5">
@@ -350,15 +363,67 @@ const SuperAdminDashboard = () => {
                 </div>
               )}
 
-               <Button onClick={handleGenerateCode} disabled={sending} className="w-full h-11 rounded-xl">
+              <Button onClick={handleGenerateCode} disabled={sending} className="w-full h-11 rounded-xl">
                 {sending ? 'Generating Code...' : `Generate ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Access Code`}
               </Button>
-              <p className="text-xs text-muted-foreground">📧 A magic link email will be sent to the invitee. The link expires in 1 hour.</p>
+              <p className="text-xs text-muted-foreground">🔒 The code expires in 15 minutes and can only be used once. Share it securely with the invitee.</p>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* STAFF TAB - Admins & Chiefs with actions */}
+        {/* ADMIN REQUESTS TAB */}
+        <TabsContent value="requests">
+          <Card className="rounded-2xl shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ClipboardList className="h-4 w-4 text-primary" /> Admin Access Requests
+              </CardTitle>
+              <CardDescription>Review requests from people who want to become administrators.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {adminRequests.length === 0 ? (
+                <div className="text-center py-16">
+                  <ClipboardList className="h-10 w-10 text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No admin requests yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {adminRequests.map(req => (
+                    <div key={req.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{req.name}</p>
+                          <Badge variant={req.status === 'approved' ? 'default' : req.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs">
+                            {req.status}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{req.email}{req.phone ? ` · ${req.phone}` : ''}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Level: {req.requested_level} · {req.county || '—'}
+                          {req.constituency ? ` > ${req.constituency}` : ''}
+                          {req.ward ? ` > ${req.ward}` : ''}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">{new Date(req.created_at).toLocaleString()}</p>
+                      </div>
+                      {req.status === 'pending' && (
+                        <div className="flex items-center gap-2">
+                          <Button size="sm" className="rounded-xl gap-1" onClick={() => handleApproveRequest(req)}>
+                            <CheckCircle className="h-3.5 w-3.5" /> Approve
+                          </Button>
+                          <Button size="sm" variant="destructive" className="rounded-xl gap-1" onClick={() => handleRejectRequest(req.id)}>
+                            <XCircle className="h-3.5 w-3.5" /> Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* STAFF TAB */}
         <TabsContent value="admins">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
@@ -390,7 +455,6 @@ const SuperAdminDashboard = () => {
                                 <Badge variant="destructive" className="text-[10px] rounded-full capitalize">{status}</Badge>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">{a.profile?.email}</p>
                             <p className="text-xs text-muted-foreground">
                               {a.profile?.admin_level ? `${a.profile.admin_level} admin` : a.role} ·
                               {a.profile?.county && ` ${a.profile.county}`}
@@ -466,7 +530,6 @@ const SuperAdminDashboard = () => {
                 <div className="space-y-2">
                   {allUsers.map(u => {
                     const status = u.user_status || 'active';
-                    // Skip the super admin's own profile
                     if (u.user_id === user?.id) return null;
                     return (
                       <div key={u.id} className="flex items-center justify-between p-4 rounded-xl bg-secondary/60">
@@ -481,7 +544,6 @@ const SuperAdminDashboard = () => {
                                 <Badge variant="destructive" className="text-[10px] rounded-full capitalize">{status}</Badge>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">{u.email}</p>
                             <p className="text-xs text-muted-foreground">{u.county}{u.constituency ? ` > ${u.constituency}` : ''}{u.ward ? ` > ${u.ward}` : ''}</p>
                           </div>
                         </div>
@@ -532,14 +594,14 @@ const SuperAdminDashboard = () => {
           </Card>
         </TabsContent>
 
-        {/* INVITATIONS TAB with delete/revoke */}
+        {/* INVITATIONS TAB */}
         <TabsContent value="invitations">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Mail className="h-4 w-4 text-primary" /> Invitation History
               </CardTitle>
-              <CardDescription>View, revoke, or delete invitations.</CardDescription>
+              <CardDescription>View, revoke, or delete past invitations.</CardDescription>
             </CardHeader>
             <CardContent>
               {invitations.length === 0 ? (
@@ -558,9 +620,7 @@ const SuperAdminDashboard = () => {
                           {inv.constituency && ` > ${inv.constituency}`}
                           {inv.ward && ` > ${inv.ward}`}
                         </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {new Date(inv.created_at).toLocaleString()}
-                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">{new Date(inv.created_at).toLocaleString()}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant={inv.status === 'used' ? 'default' : inv.status === 'expired' ? 'destructive' : 'secondary'} className="capitalize rounded-full text-xs">
@@ -614,7 +674,7 @@ const SuperAdminDashboard = () => {
                 <Input
                   value={lookupId}
                   onChange={e => setLookupId(e.target.value)}
-                  placeholder="Enter Education ID (e.g. EV-M3X7K...)"
+                  placeholder="Enter Education ID (e.g. EDU-A1B2C3D4)"
                   className="h-11 rounded-xl"
                   onKeyDown={e => e.key === 'Enter' && handleLookup()}
                 />
@@ -625,7 +685,6 @@ const SuperAdminDashboard = () => {
 
               {lookupResult && (
                 <div className="space-y-6">
-                  {/* Student Info */}
                   <div className="p-4 rounded-xl bg-secondary/60">
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -648,11 +707,7 @@ const SuperAdminDashboard = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Documents */}
                   <DocumentList studentId={lookupResult.student.id} />
-
-                  {/* Comments */}
                   {lookupResult.comments?.length > 0 && (
                     <Card className="rounded-2xl shadow-sm">
                       <CardHeader><CardTitle className="text-sm">Comments</CardTitle></CardHeader>

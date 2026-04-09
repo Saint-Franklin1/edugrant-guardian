@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -28,6 +28,11 @@ const RegisterPage = () => {
   const [googleLoading, setGoogleLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Session cleanup on mount
+  useEffect(() => {
+    supabase.auth.signOut();
+  }, []);
 
   const update = (key: string, value: string) => setForm(f => ({ ...f, [key]: value }));
 
