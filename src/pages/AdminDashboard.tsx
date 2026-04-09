@@ -414,6 +414,7 @@ const AdminDashboard = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="bursary">
           <Card className="rounded-2xl shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4 text-primary" /> Bursary Lifecycle</CardTitle>
