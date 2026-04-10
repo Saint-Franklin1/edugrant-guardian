@@ -18,9 +18,13 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Session cleanup on mount
+  // Session cleanup on mount — preserve invite_token
   useEffect(() => {
+    const inviteToken = sessionStorage.getItem('invite_token');
     supabase.auth.signOut();
+    if (inviteToken) {
+      sessionStorage.setItem('invite_token', inviteToken);
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
