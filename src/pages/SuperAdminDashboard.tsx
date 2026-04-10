@@ -146,12 +146,10 @@ const SuperAdminDashboard = () => {
     if (error || data?.error) {
       toast({ title: 'Failed to generate code', description: data?.error || error?.message, variant: 'destructive' });
     } else {
-      toast({
-        title: '✅ Access Code Generated!',
-        description: `Code: ${data.code} — Send this to ${data.email}. Expires in 15 minutes.`,
-        duration: 30000,
-      });
+      setGeneratedCode({ code: data.code, email: data.email, expires_at: data.expires_at });
+      setCodeCopied(false);
       navigator.clipboard?.writeText(data.code);
+      toast({ title: '✅ Access Code Generated!', description: 'Code is displayed below. It has been copied to your clipboard.' });
       setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
