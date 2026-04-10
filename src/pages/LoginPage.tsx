@@ -35,7 +35,13 @@ const LoginPage = () => {
         toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
       }
     } else {
-      navigate('/');
+      // Check if there's a pending invite to process
+      const pendingInvite = sessionStorage.getItem('invite_token');
+      if (pendingInvite) {
+        navigate('/accept-invite', { replace: true });
+      } else {
+        navigate('/');
+      }
     }
   };
 
