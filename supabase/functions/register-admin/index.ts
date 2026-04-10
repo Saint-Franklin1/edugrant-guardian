@@ -113,12 +113,10 @@ serve(async (req) => {
 
     const newUserId = userId;
 
-    // The handle_new_user trigger creates profile and assigns 'user' role.
-    // We need to also assign the staff role and update the profile's admin_level.
     // Assign the staff role using service role (bypasses RLS)
     await supabaseAdmin
       .from('user_roles')
-      .insert({ user_id: newUser.id, role: accessCode.role });
+      .upsert({ user_id: newUserId, role: accessCode.role }, { onConflict: 'user_id,role' });
 
     // Update profile with admin_level
     await supabaseAdmin
@@ -129,7 +127,7 @@ serve(async (req) => {
         constituency: accessCode.constituency || '',
         ward: accessCode.ward || '',
       })
-      .eq('user_id', newUser.id);
+      .eq('user_id', newUserId);
 
     // Mark code as used
     await supabaseAdmin
@@ -139,11 +137,11 @@ serve(async (req) => {
 
     // Audit log
     await supabaseAdmin.from('audit_logs').insert({
-      actor_id: newUser.id,
+      actor_id: newUserId,
       actor_role: accessCode.role,
       action: 'admin_registered_via_code',
       target_type: 'user',
-      target_id: newUser.id,
+      target_id: newUserId,
       metadata: {
         access_code_id: accessCode.id,
         role: accessCode.role,
