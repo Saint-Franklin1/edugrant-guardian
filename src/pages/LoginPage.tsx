@@ -18,9 +18,13 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Session cleanup on mount
+  // Session cleanup on mount — preserve invite_token
   useEffect(() => {
+    const inviteToken = sessionStorage.getItem('invite_token');
     supabase.auth.signOut();
+    if (inviteToken) {
+      sessionStorage.setItem('invite_token', inviteToken);
+    }
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -35,7 +39,13 @@ const LoginPage = () => {
         toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
       }
     } else {
-      navigate('/');
+      // Check if there's a pending invite to process
+      const pendingInvite = sessionStorage.getItem('invite_token');
+      if (pendingInvite) {
+        navigate('/accept-invite', { replace: true });
+      } else {
+        navigate('/');
+      }
     }
   };
 
