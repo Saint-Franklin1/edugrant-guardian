@@ -55,6 +55,8 @@ const SuperAdminDashboard = () => {
   const [lookupId, setLookupId] = useState('');
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<{ code: string; email: string; expires_at: string } | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     supabase.from('counties').select('*').order('name').then(({ data }) => setCounties(data || []));
