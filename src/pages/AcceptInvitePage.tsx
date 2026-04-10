@@ -6,13 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
-import logo from '@/assets/logo.png';
 
-type InviteState = 'loading' | 'accepting' | 'success' | 'expired' | 'used' | 'invalid' | 'error';
+type InviteState = 'loading' | 'redirecting' | 'accepting' | 'success' | 'expired' | 'used' | 'invalid' | 'error';
 
 const AcceptInvitePage = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const tokenFromUrl = searchParams.get('token');
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, session, refreshProfile } = useAuth();
@@ -21,7 +20,9 @@ const AcceptInvitePage = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const acceptedRef = useRef(false);
 
-  // Once we have both session + token, validate and auto-accept
+  // Step 1: Capture token from URL or sessionStorage
+  const token = tokenFromUrl || sessionStorage.getItem('invite_token');
+
   useEffect(() => {
     if (!token) {
       setState('invalid');
@@ -29,10 +30,22 @@ const AcceptInvitePage = () => {
       return;
     }
 
-    // Wait for auth to settle
-    if (!session || !user) return;
+    // Always persist the token so it survives login redirect
+    if (tokenFromUrl) {
+      sessionStorage.setItem('invite_token', tokenFromUrl);
+    }
 
-    // Prevent double-accept
+    // If not authenticated, redirect to login
+    if (!session || !user) {
+      setState('redirecting');
+      // Small delay to show redirecting state
+      const timer = setTimeout(() => {
+        navigate('/login', { replace: true });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+
+    // Authenticated — process the invite
     if (acceptedRef.current) return;
     acceptedRef.current = true;
 
@@ -40,9 +53,13 @@ const AcceptInvitePage = () => {
       setState('accepting');
 
       try {
+        console.log('[AcceptInvite] Processing invite for:', user.email);
+
         const { data, error } = await supabase.functions.invoke('accept-invite', {
           body: { token },
         });
+
+        console.log('[AcceptInvite] Response:', { data, error });
 
         if (error || data?.error) {
           const msg = data?.error || error?.message || 'Unknown error';
@@ -61,13 +78,15 @@ const AcceptInvitePage = () => {
           return;
         }
 
+        // Clean up
+        sessionStorage.removeItem('invite_token');
         setState('success');
         toast({ title: 'Welcome to Elimu Vault!', description: `Your ${data.role} account has been set up.` });
         await refreshProfile();
 
-        // Redirect to complete profile
         setTimeout(() => navigate('/complete-profile', { replace: true }), 2000);
       } catch (err: any) {
+        console.error('[AcceptInvite] Error:', err);
         setState('error');
         setErrorMsg(err?.message || 'Failed to accept invitation');
       }
@@ -80,7 +99,6 @@ const AcceptInvitePage = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md animate-fade-in">
         <div className="text-center mb-6">
-          <img src={logo} alt="Elimu Vault Logo" className="h-20 w-auto mx-auto mb-3" />
           <h1 className="font-heading text-2xl font-bold">Staff Invitation</h1>
         </div>
 
@@ -95,10 +113,20 @@ const AcceptInvitePage = () => {
           </Card>
         )}
 
+        {state === 'redirecting' && (
+          <Card className="border-0 shadow-lg">
+            <CardContent className="py-12 text-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+              <p className="text-muted-foreground">You need to log in first. Redirecting to login...</p>
+              <p className="text-xs text-muted-foreground mt-2">Your invitation will be processed after you sign in.</p>
+            </CardContent>
+          </Card>
+        )}
+
         {state === 'success' && (
           <Card className="border-0 shadow-lg">
             <CardContent className="py-12 text-center">
-              <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+              <CheckCircle className="h-12 w-12 text-primary mx-auto mb-3" />
               <h2 className="font-heading text-lg font-bold mb-2">Welcome to Elimu Vault!</h2>
               <p className="text-muted-foreground text-sm">Your account is ready. Redirecting to complete your profile...</p>
             </CardContent>
@@ -108,7 +136,7 @@ const AcceptInvitePage = () => {
         {state === 'used' && (
           <Card className="border-0 shadow-lg">
             <CardContent className="py-12 text-center">
-              <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-3" />
+              <CheckCircle className="h-12 w-12 text-primary mx-auto mb-3" />
               <h2 className="font-heading text-lg font-bold mb-2">Already Accepted</h2>
               <p className="text-muted-foreground text-sm">This invitation has already been used.</p>
               <Button className="mt-4" onClick={() => navigate('/login')}>Go to Login</Button>
