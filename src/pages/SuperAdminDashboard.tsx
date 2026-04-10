@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building,
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
-  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList,
+  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList, Copy, Check,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import {
@@ -55,6 +55,8 @@ const SuperAdminDashboard = () => {
   const [lookupId, setLookupId] = useState('');
   const [lookupResult, setLookupResult] = useState<any>(null);
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<{ code: string; email: string; expires_at: string } | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   useEffect(() => {
     supabase.from('counties').select('*').order('name').then(({ data }) => setCounties(data || []));
@@ -144,12 +146,10 @@ const SuperAdminDashboard = () => {
     if (error || data?.error) {
       toast({ title: 'Failed to generate code', description: data?.error || error?.message, variant: 'destructive' });
     } else {
-      toast({
-        title: '✅ Access Code Generated!',
-        description: `Code: ${data.code} — Send this to ${data.email}. Expires in 15 minutes.`,
-        duration: 30000,
-      });
+      setGeneratedCode({ code: data.code, email: data.email, expires_at: data.expires_at });
+      setCodeCopied(false);
       navigator.clipboard?.writeText(data.code);
+      toast({ title: '✅ Access Code Generated!', description: 'Code is displayed below. It has been copied to your clipboard.' });
       setInviteEmail(''); setInviteRole('admin'); setInviteLevel(''); setSelectedCountyId('');
       fetchData();
     }
@@ -367,6 +367,44 @@ const SuperAdminDashboard = () => {
                 {sending ? 'Generating Code...' : `Generate ${inviteRole === 'chief' ? 'Chief' : 'Admin'} Access Code`}
               </Button>
               <p className="text-xs text-muted-foreground">🔒 The code expires in 15 minutes and can only be used once. Share it securely with the invitee.</p>
+
+              {generatedCode && (
+                <div className="mt-4 p-4 rounded-xl border-2 border-primary/30 bg-primary/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-primary">Access Code Generated</p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 text-xs"
+                      onClick={() => { setGeneratedCode(null); }}
+                    >
+                      <XCircle className="h-3.5 w-3.5" /> Dismiss
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <code className="text-3xl font-mono font-bold tracking-[0.3em] text-foreground bg-background px-4 py-2 rounded-lg border select-all">
+                      {generatedCode.code}
+                    </code>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-9 gap-1.5 rounded-lg"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(generatedCode.code);
+                        setCodeCopied(true);
+                        setTimeout(() => setCodeCopied(false), 2000);
+                      }}
+                    >
+                      {codeCopied ? <><Check className="h-3.5 w-3.5" /> Copied</> : <><Copy className="h-3.5 w-3.5" /> Copy</>}
+                    </Button>
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p><strong>For:</strong> {generatedCode.email}</p>
+                    <p><strong>Expires:</strong> {new Date(generatedCode.expires_at).toLocaleTimeString()}</p>
+                    <p>Share this code with the invitee. They will use it at <code className="bg-muted px-1 rounded">/admin-register</code> along with their email and a password.</p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
