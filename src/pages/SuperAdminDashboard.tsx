@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import {
   Shield, Users, UserPlus, Mail, MapPin, Globe, Building,
   CheckCircle, XCircle, Clock, FileText, Activity, Crown, Loader2,
-  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList,
+  Trash2, Ban, UserX, RotateCcw, Search, Eye, ClipboardList, Copy, Check,
 } from 'lucide-react';
 import { useRealtimeTable } from '@/hooks/use-realtime';
 import {
