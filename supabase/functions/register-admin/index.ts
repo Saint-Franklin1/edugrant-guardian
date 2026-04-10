@@ -65,32 +65,53 @@ serve(async (req) => {
       });
     }
 
-    // Create auth user
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: {
-        name: '',
-        role: accessCode.role,
-        county: accessCode.county || '',
-        constituency: accessCode.constituency || '',
-        ward: accessCode.ward || '',
-      },
-    });
+    // Check if user already exists
+    let userId: string;
 
-    if (authError) {
-      if (authError.message?.includes('already been registered')) {
-        return new Response(JSON.stringify({ error: 'An account with this email already exists. Please log in instead.' }), {
+    const { data: existingUserData } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUserData?.users?.find((u: any) => u.email === email);
+
+    if (existingUser) {
+      // User exists — check they don't already have a staff role
+      const { data: existingRole } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', existingUser.id)
+        .in('role', ['admin', 'chief', 'super_admin'])
+        .maybeSingle();
+
+      if (existingRole) {
+        return new Response(JSON.stringify({ error: 'This user already has a staff role assigned.' }), {
           status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      return new Response(JSON.stringify({ error: authError.message }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+
+      userId = existingUser.id;
+    } else {
+      // Create new auth user
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          name: '',
+          role: accessCode.role,
+          county: accessCode.county || '',
+          constituency: accessCode.constituency || '',
+          ward: accessCode.ward || '',
+        },
       });
+
+      if (authError) {
+        return new Response(JSON.stringify({ error: authError.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      userId = authData.user.id;
     }
 
-    const newUser = authData.user;
+    const newUserId = userId;
 
     // The handle_new_user trigger creates profile and assigns 'user' role.
     // We need to also assign the staff role and update the profile's admin_level.
