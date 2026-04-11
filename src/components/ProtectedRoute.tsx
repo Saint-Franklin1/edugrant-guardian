@@ -1,54 +1,45 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { isProfileComplete } from '@/lib/profile-utils';
-import type { Database } from '@/integrations/supabase/types';
-
-type AppRole = Database['public']['Enums']['app_role'];
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  allowedRoles?: AppRole[];
 }
 
-const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, role, roles, loading, profile } = useAuth();
+const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
+  const { user, userData, loading } = useAuth();
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center mx-auto mb-3 animate-pulse">
-            <span className="text-primary-foreground font-heading font-bold text-sm">EV</span>
-          </div>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
           <p className="text-muted-foreground text-sm">Loading...</p>
         </div>
       </div>
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
-
-  // Super admin bypasses all profile checks
-  if (roles.includes('super_admin')) {
-    if (allowedRoles && !allowedRoles.some(r => roles.includes(r))) {
-      return <Navigate to="/" replace />;
-    }
-    return <>{children}</>;
+  // Not authenticated
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-  // Admin must select level first
-  if (roles.includes('admin') && (!profile || !profile.admin_level)) {
-    return <Navigate to="/select-admin-level" replace />;
+  // User data not loaded yet or user not found in users table
+  if (!userData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+          <p className="text-muted-foreground text-sm">Verifying access...</p>
+        </div>
+      </div>
+    );
   }
 
-  // Check profile completeness based on role and admin_level
-  if (!isProfileComplete(profile, role, roles)) {
-    return <Navigate to="/complete-profile" replace />;
-  }
-
-  if (allowedRoles && allowedRoles.length > 0) {
-    const hasAccess = allowedRoles.some(r => roles.includes(r));
-    if (!hasAccess) return <Navigate to="/" replace />;
+  // Only allow super_admin role
+  if (userData.role !== 'super_admin') {
+    return <Navigate to="/login" replace />;
   }
 
   return <>{children}</>;
