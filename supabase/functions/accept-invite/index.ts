@@ -94,12 +94,13 @@ serve(async (req) => {
       });
     }
 
-    // Update profile with admin_level and jurisdiction
+    // Update profile with admin_level, jurisdiction, and phone
     const profileUpdate: Record<string, string | null> = {
       admin_level: invitation.admin_level,
       county: invitation.county || '',
       constituency: invitation.constituency || '',
       ward: invitation.ward || '',
+      phone: invitation.phone || null,
     };
 
     const { data: existingProfile } = await supabaseAdmin
